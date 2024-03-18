@@ -159,7 +159,12 @@ struct IntMap{
 		occupied[i] = true;
 		data[i] = val;
 	}
+	void add(int i, const t& val) {
+		occupied[i] = true;
+		data[i] += val;
+	}
 	void add_or_insert(int i, const t& val) {
+		// slow?
 		if (occupied[i]) {
 			data[i] += val;
 		}

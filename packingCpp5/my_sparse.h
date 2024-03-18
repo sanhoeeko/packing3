@@ -50,6 +50,9 @@ struct MySparseVector<Nm, TripletB> : MySparseVectorBase<Nm, TripletB> {
 template<int Nm>
 struct MySparseVector<Nm, Eigen::Vector2f> : MySparseVectorBase<Nm, Eigen::Vector2f> {
 
+    MySparseVector<Nm, Eigen::Vector2f>() {
+        memset(this->dict.data, 0, Nm * sizeof(Eigen::Vector2f));
+    }
     Vecf<2 * Nm> toVector() {
         Vecf<2 * Nm> res; res.setZero();
         for (IntMapIterator<Nm, Eigen::Vector2f> it(this->dict); it.goes(); ++it) {
@@ -82,8 +85,8 @@ struct MySparseMatrixBase {
         for (IntPairMapIterator<Nm, MAX_CONTACT_NUMBER, t> it(dict); it.goes(); ++it) {
             int i, j; t* pvalue;
             std::tie(i, j, pvalue) = it.val();
-            res.dict.add_or_insert(i, -*pvalue);
-            res.dict.add_or_insert(j, *pvalue);
+            res.dict.add(i, -*pvalue);      // only for MySparseVector<Nm, t> t=Eigen::Vector2f, which has zero initialization
+            res.dict.add(j, *pvalue);
         }
         return res;
     }

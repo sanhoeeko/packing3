@@ -40,6 +40,7 @@ void _collisionC(DistInfo<m* N>* rs, Grid* grid, bt* b, float* px) {
 		px: input data: must be .data() of a vector in the 2Nm space
 		[rs->distpp], [rs->distpw] are also in the 2Nm space
 	*/
+	rs->is_clear = false;
 	_collisionDetectC<m, N>(grid, px, rs->distpp);
 	_boundaryCollisionDetectC<m * N>(b, px, rs->distpw);
 }

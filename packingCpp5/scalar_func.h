@@ -2,6 +2,7 @@
 
 #include"defs.h"
 #include<math.h>
+#include<functional>
 #include<iostream>
 
 /*
@@ -11,8 +12,11 @@ template<int bin_digit>
 class FastScalar { public:
 	float* arr;
 	float scale;
+	std::function<float(float)> func;
+
 	FastScalar() { ; }
 	FastScalar(float (*scalar_func)(float)) {
+		func = scalar_func;
 		long long len = (long long)1 << bin_digit;
 		arr = new float[len];
 		float inv_scale = 2.0f / len;
@@ -22,8 +26,13 @@ class FastScalar { public:
 		}
 		std::cout << "Successfully initialize a fast scalar function."<< std::endl;
 	}
-	float operator()(const float x) {
+	float operator()(float x) {
 		if (x < 0 || x >= 2) return 0;
+		return arr[(int)(x * scale)];
+	}
+	float func_allow_negative(float x) {
+		if (x >= 2) return 0;
+		else if (x < 0) return func(x);
 		return arr[(int)(x * scale)];
 	}
 };
@@ -92,9 +101,9 @@ public:
 		dfpw = FastScalar<SCALAR_RESOLUTION>([](float h)->float {return h > 0 && h < 1 ? expf(-h / 1.0f) : 0; });
 	}
 	float pp(float r) { return fpp(r); }
-	float pw(float h) { return fpw(h); }
+	float pw(float h) { return fpw.func_allow_negative(h); }
 	float dpp_r(float r) { return dfpp(r); }
-	float dpw(float h) { return dfpw(h); } // pitfall: divided by r manually
+	float dpw(float h) { return dfpw.func_allow_negative(h); } // pitfall: divided by r manually
 };
 
 // Instant

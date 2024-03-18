@@ -15,9 +15,9 @@ enum class ScalarF { Power, Exp };
 // Basic options. Varies from one experiment to another.
 
 #define PARTICLE_NUM 1000
-#define ASSEMBLY_NUM 7
+#define ASSEMBLY_NUM 5
 #define SPHERE_DIST 1.0f
-#define INIT_BOUNDARY 20 * 4
+#define INIT_BOUNDARY 22 * 4
 #define COMPRESSION_RATE 0.04 * 4
 #define NUM_COMPRESSIONS 250
 #define OUTPUT_STRIDE 1
