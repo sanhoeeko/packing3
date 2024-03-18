@@ -2,6 +2,8 @@
 
 #include"grid.h"
 
+const float particle_radius = 1 + (float)(ASSEMBLY_NUM - 1) / 2 * SPHERE_DIST;
+
 class Boundary {
 public:
 	float initial_scalar_radius;

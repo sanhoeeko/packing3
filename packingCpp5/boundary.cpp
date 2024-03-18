@@ -1,8 +1,6 @@
 #include "boundary.h"
 #include "solver.h"
 
-const float particle_radius = (float)(ASSEMBLY_NUM + 1) / 2;
-
 void Boundary::define_scalar_radius(float r)
 {
     this->scalar_radius = r;

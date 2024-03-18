@@ -35,7 +35,7 @@ Grid* GridLocate(StateInfo<m, N, bt>& state_info) {
 	Note: collisions are detected in the 2Nm space.
 */
 template<int m, int N, typename bt>
-void _collisionC(DistInfo* rs, Grid* grid, bt* b, float* px) {
+void _collisionC(DistInfo<m* N>* rs, Grid* grid, bt* b, float* px) {
 	/*
 		px: input data: must be .data() of a vector in the 2Nm space
 		[rs->distpp], [rs->distpw] are also in the 2Nm space
@@ -45,7 +45,7 @@ void _collisionC(DistInfo* rs, Grid* grid, bt* b, float* px) {
 }
 
 template<int m, int N, typename bt>
-DistInfo* Collision(StateInfo<m, N, bt>& state_info) {
+DistInfo<m* N>* Collision(StateInfo<m, N, bt>& state_info) {
 	if (state_info.dist()->is_clear) {
 		_collisionC<m, N, bt>(state_info.dist(), GridLocate(state_info), 
 			state_info.state->boundary, state_info.sphereSpace()->data());
@@ -53,7 +53,8 @@ DistInfo* Collision(StateInfo<m, N, bt>& state_info) {
 	return state_info.dist();
 }
 
-float _calEnergy_from_dist(DistInfo* rs) {
+template<int m, int N>
+float _calEnergy_from_dist(DistInfo<m* N>* rs) {
 	// use Eigen vectorization to accelerate loops
 	static auto lambda_pp = [](float r)->float {return V.pp(r); };
 	static auto lambda_pw = [](float h)->float {return V.pw(h); };
@@ -76,13 +77,13 @@ Eigen::Vector2f singleForcePW(TripletB& hxy) {
 }
 
 template<int m, int N, typename bt>
-Vecf<2 * N * m> _calForce_from_dist(DistInfo* rs, SphereAssembly<m>* sa) {
+Vecf<2 * N * m> _calForce_from_dist(DistInfo<m* N>* rs, SphereAssembly<m>* sa) {
 	static auto fpp = std::function<Eigen::Vector2f(Triplet&)>(singleForcePP);
 	static auto fpw = std::function<Eigen::Vector2f(TripletB&)>(singleForcePW);
 	// particle-particle force
-	Vecf<2 * N * m> forces_pp = rs->distpp->apply(fpp).rowwiseSumAsym().template toVector<N, m>();
+	Vecf<2 * N * m> forces_pp = rs->distpp->apply(fpp).rowwiseSumAsym().toVector();
 	// particle-wall force
-	Vecf<2 * N * m> forces_pw = rs->distpw->apply(fpw).template toVector<N, m>();
+	Vecf<2 * N * m> forces_pw = rs->distpw->apply(fpw).toVector();
 	Vecf<2 * N * m> forces = forces_pp + forces_pw;
 	return forces;
 }
@@ -100,7 +101,7 @@ template<int m, int N, typename bt>
 float CalEnergy(StateInfo<m, N, bt>& state_info) {
 	if (state_info._energy == NULL) {
 		state_info._energy = new float[1];
-		*(state_info._energy) = _calEnergy_from_dist(Collision(state_info));
+		*(state_info._energy) = _calEnergy_from_dist<m, N>(Collision(state_info));
 	}
 	return state_info.energy();
 }
@@ -115,7 +116,7 @@ void Descent(StateInfo<m, N, bt>& state_info, float step_size) {
 template<int m, int N, typename bt>
 StateInfo<m, N, bt> CreateRandomState(float initial_boundary_a, float initial_boundary_b) {
 	bt* b = new bt(initial_boundary_a, initial_boundary_b);
-	SphereChain<m>* sphere_chain = new SphereChain<m>(1.0f);
+	SphereChain<m>* sphere_chain = new SphereChain<m>(SPHERE_DIST);
 	State<m, N, bt>* state = new State<m, N, bt>(b, sphere_chain);
 	RandomInit<m, N, bt>(state);
 	return StateInfo<m, N, bt>(state);

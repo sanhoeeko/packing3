@@ -18,11 +18,18 @@ struct Simulation{
 		energy_curve = new IvectorSampler<float, MAX_INIT_ITERATIONS, ENERGY_RESOLUTION>(&_energy_curve);
 		current_step_size = meta->step_size;
 
-		InnerLoopData data = loop_classic(MAX_INIT_ITERATIONS);
 		std::cout << "Simulation ID: " << meta->name << std::endl;
+		InnerLoopData init_data = relaxAfterInit();
+		while (cancelPenetrate<PARTICLE_NUM>(*(state_info.state->q), particle_radius, 1.0f)) {
+			init_data = relaxAfterInit();
+		}
+		output(0, init_data);
+	}
+	InnerLoopData relaxAfterInit() {
+		InnerLoopData data = loop_classic(MAX_INIT_ITERATIONS);
 		std::cout << "Initialization finished. iterations: " << data.iterations
 			<< ",\t energy: " << data.energy << std::endl;
-		output(0, data);
+		return data;
 	}
 	void simulate() {
 		for (int t = 0; t < NUM_COMPRESSIONS; t++) {

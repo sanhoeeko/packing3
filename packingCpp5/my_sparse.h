@@ -2,7 +2,8 @@
 
 #include"defs.h"
 #include"boundary.h"
-#include<unordered_map>
+#include"mymap.h"
+#include"ivector.h"
 #include<functional>
 
 struct Triplet{
@@ -12,115 +13,97 @@ struct TripletB {
     float h, x, y;
 };
 
-struct pair_hash {
-    std::size_t operator () (const std::pair<int, int>& key) const {
-        return ((std::size_t)key.first << 32) | key.second;
-    }
-};
+template<int Nm, typename t> struct MySparseVector;
 
-template<typename t> struct MySparseVector;
-
-template<typename t>
+template<int Nm, typename t>
 struct MySparseVectorBase {
-    std::unordered_map<int, t> dict;    // int type does not need a hash function
+    IntMap<Nm, t> dict;
 
     void clear() {
         dict.clear();
     }
     template<typename result_t>
-    MySparseVector<result_t> apply(std::function<result_t(t&)> f) {
-        MySparseVector<result_t> res; res.dict.reserve(this->dict.size());
-        for (auto& kv : dict) {
-            res.dict[kv.first] = f(kv.second);
-        }
+    MySparseVector<Nm, result_t> apply(std::function<result_t(t&)> f) {
+        MySparseVector<Nm, result_t> res;
+        res.dict = dict.apply(f);
         return res;
     }
 };
 
-template<typename t> struct MySparseVector : MySparseVectorBase<t> {};
+template<int Nm, typename t> struct MySparseVector : MySparseVectorBase<Nm, t> {};
 
-template<>
-struct MySparseVector<TripletB> : MySparseVectorBase<TripletB> {
+template<int Nm>
+struct MySparseVector<Nm, TripletB> : MySparseVectorBase<Nm, TripletB> {
     void link(int i, float h, float x, float y) {
-        dict[i] = { h, x, y };
+        this->dict.insert(i, { h, x, y });
     }
     Eigen::ArrayXf get_h_array() {
-        Eigen::ArrayXf res(dict.size());
+        Eigen::ArrayXf res(this->dict.size());
         float* ptr = res.data();
-        for (auto& kv : dict) {
-            *ptr++ = kv.second.h;
+        for (IntMapIterator<Nm, TripletB> it(this->dict); it.goes(); ++it) {
+            *ptr++ = it.val()->h;
         }
         return res;
     }
 };
 
-template<>
-struct MySparseVector<Eigen::Vector2f> : MySparseVectorBase<Eigen::Vector2f> {
+template<int Nm>
+struct MySparseVector<Nm, Eigen::Vector2f> : MySparseVectorBase<Nm, Eigen::Vector2f> {
 
-    template<int N, int m>
-    Vecf<2 * N * m> toVector() {
-        Vecf<2 * N * m> res; res.setZero();
-        for (auto& kv : dict) {
-            int i = kv.first;
-            res(i) = kv.second(0);
-            res(i + N * m) = kv.second(1);
+    Vecf<2 * Nm> toVector() {
+        Vecf<2 * Nm> res; res.setZero();
+        for (IntMapIterator<Nm, Eigen::Vector2f> it(this->dict); it.goes(); ++it) {
+            res(it.i) = (*it.val())(0);
+            res(it.i + Nm) = (*it.val())(1);
         }
         return res;
     }
 };
 
 
-template<typename t> struct MySparseMatrix;
+template<int Nm, typename t> struct MySparseMatrix;
 
-template<typename t>
+template<int Nm, typename t>
 struct MySparseMatrixBase {
-	std::unordered_map<std::pair<int, int>, t, pair_hash> dict;
+    IntPairMap<Nm, MAX_CONTACT_NUMBER, t> dict;
 
-    t& operator()(int i, int j) {
-        return dict[{i, j}];
-    }
     void clear() {
         dict.clear();
     }
     template<typename result_t>
-    MySparseMatrix<result_t> apply(std::function<result_t(t&)> f) {
+    MySparseMatrix<Nm, result_t> apply(std::function<result_t(t&)> f) const & {
         // input: a function [fx, fy] = f(r, x, y) to calculate forces
-        MySparseMatrix<result_t> res; res.dict.reserve(this->dict.size());
-        for (auto& kv : dict) {
-            res.dict[kv.first] = f(kv.second);
-        }
+        MySparseMatrix<Nm, result_t> res;
+        res.dict = this->dict.apply(f);     // note this "=". [operator=] of [IntPairMap] must be overloaded!!
         return res;
     }
-    MySparseVector<t> rowwiseSumAsym() {
-        MySparseVector<t> res; res.dict.reserve(this->dict.size());
-        for (auto& kv : dict) {
-            t& value = kv.second;
-            auto iterator_and_success = res.dict.insert({kv.first.first, -value});
-            if (!iterator_and_success.second) {                                     // If the key already exists
-                iterator_and_success.first->second -= value;                        // Add to the existing value
-            }
-            iterator_and_success = res.dict.insert({ kv.first.second, value });
-            if (!iterator_and_success.second) {
-                iterator_and_success.first->second += value;
-            }
+    MySparseVector<Nm, t> rowwiseSumAsym() {
+        MySparseVector<Nm, t> res;
+        for (IntPairMapIterator<Nm, MAX_CONTACT_NUMBER, t> it(dict); it.goes(); ++it) {
+            int i, j; t* pvalue;
+            std::tie(i, j, pvalue) = it.val();
+            res.dict.add_or_insert(i, -*pvalue);
+            res.dict.add_or_insert(j, *pvalue);
         }
         return res;
     }
 };
 
-template<typename t> struct MySparseMatrix : MySparseMatrixBase<t>{};
+template<int Nm, typename t> struct MySparseMatrix : MySparseMatrixBase<Nm, t>{};
 
-template<>
-struct MySparseMatrix<Triplet> : MySparseMatrixBase<Triplet> {
+template<int Nm>
+struct MySparseMatrix<Nm, Triplet> : MySparseMatrixBase<Nm, Triplet> {
     // inherit
     void link(int i, int j, float r, float x, float y) {
-        dict[{i, j}] = { r,x,y };
+        this->dict.insert(i, j, { r,x,y });
     }
     Eigen::ArrayXf get_r_array() {
-        Eigen::ArrayXf res(dict.size());
-        float* ptr = res.data();
-        for (auto& kv : dict) {
-            *ptr++ = kv.second.r;
+        Eigen::ArrayXf res(this->dict.size());
+        Triplet* ptr = this->dict.data;
+        Triplet* pend = ptr + this->dict.size();
+        float* dst = res.data();
+        for (; ptr < pend; ptr++) {
+            *dst++ = ptr->r;
         }
         return res;
     }

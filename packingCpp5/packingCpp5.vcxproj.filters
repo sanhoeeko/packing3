@@ -60,6 +60,9 @@
     <ClInclude Include="simulation.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="mymap.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

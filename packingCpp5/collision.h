@@ -6,7 +6,7 @@
 #include <cmath>
 
 template<int m, int N>
-void _collisionDetectC(Grid* grid, float* x, MySparseMatrix<Triplet>* dst) {
+void _collisionDetectC(Grid* grid, float* x, MySparseMatrix<m * N, Triplet>* dst) {
 	/*
 		Given that a particle is in a certain grid,
 		it is only possible to collide with particles in that grid or surrounding grids.
@@ -67,7 +67,7 @@ void _collisionDetectC(Grid* grid, float* x, MySparseMatrix<Triplet>* dst) {
 }
 
 template<int mN>
-void _boundaryCollisionDetectC(Boundary* b, float* x, MySparseVector<TripletB>* dst) {
+void _boundaryCollisionDetectC(Boundary* b, float* x, MySparseVector<mN, TripletB>* dst) {
 	/*
 		Though it is also collision detection, grid is not necessary.
 	*/

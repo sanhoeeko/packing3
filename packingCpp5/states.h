@@ -32,9 +32,10 @@ template<int m, int N> using StateC = State<m, N, BoundaryC>;
 template<int m, int N> using StateE = State<m, N, BoundaryE>;
 
 
+template<int mN>
 struct DistInfo {
-	MySparseMatrix<Triplet>* distpp;
-	MySparseVector<TripletB>* distpw;
+	MySparseMatrix<mN, Triplet>* distpp;
+	MySparseVector<mN, TripletB>* distpw;
 	bool is_clear = true;
 
 	void clear() {
@@ -76,7 +77,7 @@ struct StateInfo{
 	SpaceTransformer<N, m>* transformer = NULL;
 	Vecf<2 * N * m>* _sphere_space = NULL;		// access variables start with underline by calling corresponding functions
 	Grid* _grid = NULL;					
-	DistInfo* _dist = NULL;
+	DistInfo<m * N>* _dist = NULL;
 	Vecf<3 * N>* gradient = NULL;
 	float* _energy = NULL;
 
@@ -120,13 +121,11 @@ struct StateInfo{
 		}
 		return this->_grid;
 	}
-	DistInfo* dist() {
+	DistInfo<m* N>* dist() {
 		if (this->_dist == NULL) {
-			this->_dist = new DistInfo();
-			_dist->distpp = new MySparseMatrix<Triplet>();
-			_dist->distpw = new MySparseVector<TripletB>();
-			_dist->distpp->dict.reserve(32 * m * N);
-			_dist->distpw->dict.reserve(m * N);
+			this->_dist = new DistInfo<m * N>();
+			_dist->distpp = new MySparseMatrix<m * N, Triplet>();
+			_dist->distpw = new MySparseVector<m * N, TripletB>();
 		}
 		return this->_dist;
 	}

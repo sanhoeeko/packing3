@@ -88,6 +88,7 @@ public:
 		// Macros
 		js["particle number"] = N;
 		js["assembly number"] = ASSEMBLY_NUM;
+		js["sphere distance"] = SPHERE_DIST;
 		js["particle aspect ratio"] = (float)(ASSEMBLY_NUM - 1) / 2;
 		js["particle size a"] = (float)(ASSEMBLY_NUM - 1) / 2;
 		js["particle size b"] = 1;
