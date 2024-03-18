@@ -18,16 +18,16 @@ struct IntPairMap{
 	
 	IntPairMap() {
 		int capacity = n * threads;
-		secs = new std::pair<int, int>[capacity];
-		sizes = new int[n]; memset(sizes, 0, n * sizeof(int));
-		data = new t[capacity];
+		secs = (std::pair<int, int>*)malloc(capacity * sizeof(std::pair<int, int>));
+		sizes = (int*)malloc(n * sizeof(int)); memset(sizes, 0, n * sizeof(int));
+		data = (t*)malloc(capacity * sizeof(t));	// use malloc: do not call the construct function of t. dangerous operation here.
 		cnt = 0;
 	}
 	IntPairMap(const IntPairMap<n, threads, t>& src) {
 		int capacity = n * threads;
-		secs = new std::pair<int, int>[capacity];
-		sizes = new int[n];
-		data = new t[capacity];
+		secs = (std::pair<int, int>*)malloc(capacity * sizeof(std::pair<int, int>));
+		sizes = (int*)malloc(n * sizeof(int));
+		data = (t*)malloc(capacity * sizeof(t));
 		memcpy(secs, src.secs, capacity * sizeof(std::pair<int, int>));
 		memcpy(sizes, src.sizes, n * sizeof(int));
 		memcpy(data, src.data, capacity * sizeof(t));
@@ -42,9 +42,9 @@ struct IntPairMap{
 		return *this;
 	}
 	~IntPairMap() {
-		delete[] secs;
-		delete[] sizes;
-		delete[] data;
+		free(secs);
+		free(sizes);
+		free(data);
 	}
 	int size() {
 		return cnt;
