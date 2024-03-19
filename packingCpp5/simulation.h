@@ -11,7 +11,7 @@ struct Simulation{
 	float current_step_size;	// for mutable step size
 
 	Simulation() {
-		state_info = CreateRandomState<ASSEMBLY_NUM, PARTICLE_NUM, BSHAPE>(INIT_BOUNDARY, INIT_BOUNDARY);
+		state_info = CreateRandomState<ASSEMBLY_NUM, PARTICLE_NUM, BSHAPE>(BOUNDARY_A, BOUNDARY_B);
 
 		meta = new Metadata<PARTICLE_NUM, BSHAPE>();
 		meta->output();
@@ -54,7 +54,7 @@ struct Simulation{
 	}
 	void output(int current_turn_idx, InnerLoopData& data) {
 		meta->final_energy_curve.push_back(_energy_curve.top());
-		OutputData<MAX_INIT_ITERATIONS, ASSEMBLY_NUM, PARTICLE_NUM, BoundaryC>(current_turn_idx, meta,
+		OutputData<MAX_INIT_ITERATIONS, ASSEMBLY_NUM, PARTICLE_NUM, BSHAPE>(current_turn_idx, meta,
 			*(state_info.state), _energy_curve, data);
 	}
 	InnerLoopData loop_classic(int turns) {

@@ -5,45 +5,101 @@
 #include <cmath>
 #include <functional>
 
-// Helper function to find real roots using Newton's method
-float findRealRootsNewton(
-    std::function<float(float)> func, std::function<float(float)> deriv, float start) {
+const float precision = 1e-2f;
+const int tangents_num = 3;
 
-    float x0 = start, x1, y, dy;
-    int iterations = 0;
-    while (iterations < 100) {
-        y = func(x0);
-        dy = deriv(x0);
+struct BESolver {
+    float a, b;
+    float a2, b2, a4, b4, a6, b6;
+    float x02, y02;
+    float sub_a2, sub_b2;
 
-        // Avoid division by zero
-        if (dy == 0) break;
-
-        // Newton's method formula
-        x1 = x0 - y / dy;
-
-        // Check for convergence
-        if (std::abs(x1 - x0) < 1e-5) {
-            return x1;
-        }
-        x0 = x1;
-        iterations++;
+    BESolver() { ; }
+    BESolver(float a, float b) : a(a), b(b) {
+        a2 = a * a; b2 = b * b;
+        a4 = a2 * a2; b4 = b2 * b2;
+        a6 = a2 * a4; b6 = b2 * b4;
+        sub_a2 = (a - 2) * (a - 2); sub_b2 = (b - 2) * (b - 2);
     }
-    throw "Root Not Found Error";
-}
 
-// Function to solve quartic equation using Newton's method
-float solveQuarticNewton(float a, float b, float c, float d, float e, float p0) {
-    // Define the quartic function
-    auto quarticFunc = [a, b, c, d, e](float x) -> float {
-        return a * powf(x, 4) + b * powf(x, 3) + c * powf(x, 2) + d * x + e;
-    };
+    bool gate(float x0, float y0) {
+        /*
+            If gate -> false, the particle is not possible be to in contact with the wall.
+        */
+        return x0 * x0 / sub_a2 + y0 * y0 / sub_b2 > 1;
+    }
 
-    // Define the derivative of the quartic function
-    auto quarticDeriv = [a, b, c, d](float x) -> float {
-        return 4 * a * powf(x, 3) + 3 * b * powf(x, 2) + 2 * c * x + d;
-    };
+    std::pair<float,float> make_first_estimate(float x0, float y0) {
+        float k = (a * b) / std::sqrt(b2 * x02 + a2 * y02);
+        return std::make_pair(k * x0, k * y0);
+    }
 
-    // Find real roots in the interval [-100, 100] with a step of 0.1
-    // These values can be adjusted based on the expected range and precision of the roots
-    return findRealRootsNewton(quarticFunc, quarticDeriv, p0);
-}
+    std::pair<float,float> innerIteration(float x1, float y1, float x0, float y0) {
+        float x1sq = x1 * x1, y1sq = y1 * y1;
+        float sq_delta = std::sqrt(
+            b6 * x1sq - b4 * x1sq * y02 +
+            2 * a2 * b2 * x0 * x1 * y0 * y1 +
+            a4 * (a2 - x02) * y1sq);
+        float k = 1 / (b6 * x1sq + a6 * y1sq);
+        float x20 = k * (-a4 * b2 * x1 * y0 * y1 + a6 * x0 * y1sq);
+        float y20 = k * (b6 * x1sq * y0 - a2 * b4 * x0 * y1 * x1);
+        float abs_det = std::abs(k * a * b * sq_delta);
+        return std::make_pair(x20 + b2 * x1 * abs_det, y20 + a2 * y1 * abs_det);
+    }
+
+    std::pair<float,float> inner(float x0, float y0) {
+        if (x0 == 0 && y0 == 0) {
+            return std::make_pair(0, b);
+        }
+        float x1, y1, x2, y2;
+        std::tie(x1, y1) = make_first_estimate(x0, y0);
+        for (int i = 0; i < tangents_num; ++i) {
+            std::tie(x2, y2) = innerIteration(x1, y1, x0, y0);
+            if (std::max(std::abs(x2 - x1), std::abs(y2 - y1)) < precision) {
+                return std::make_pair(x2, y2);
+            }
+        }
+        return std::make_pair(x2, y2);
+    }
+    std::pair<float, float> outerIteration(float x1, float y1) {
+        float x1sq = x1 * x1, y1sq = y1 * y1;
+        float sq_delta = std::sqrt(
+            b6 * x1sq - b4 * x1sq * y1sq +
+            2 * a2 * b2 * x1sq * y1sq +
+            a4 * (a2 - x1sq) * y1sq);
+        float k = 1 / (b6 * x1sq + a6 * y1sq);
+        float kx = k * x1;
+        float ky = k * y1;
+        float x20 = kx * (a6 * y1sq - a4 * b2 * y1sq);
+        float y20 = ky * (b6 * x1sq - a2 * b4 * x1sq);
+        float abs_det = std::abs(sq_delta);
+        return std::make_pair(x20 + (a * b * b2) * kx * abs_det, y20 + (b * a * a2) * ky * abs_det);
+    }
+    std::pair<float, float> outer(float x0, float y0) {
+        float x1, y1, x2, y2;
+        std::tie(x1, y1) = make_first_estimate(x0, y0);
+        for (int i = 0; i < tangents_num; ++i) {
+            std::tie(x2, y2) = outerIteration(x1, y1);
+            if (std::max(std::abs(x2 - x1), std::abs(y2 - y1)) < precision) {
+                return std::make_pair(x2, y2);
+            }
+        }
+        return std::make_pair(x1, y1);
+    }
+
+    float h(float x0, float y0) {
+        x0 = std::abs(x0); y0 = std::abs(y0);
+        x02 = x0 * x0; y02 = y0 * y0;           // update x02, y02 at once, before the first estimation.
+        float x1, y1;
+        if (x02 / a2 + y02 / b2 < 1) {
+            std::tie(x1, y1) = inner(x0, y0);
+            float dx = x0 - x1, dy = y0 - y1;
+            return std::sqrt(dx * dx + dy * dy);
+        }
+        else {
+            std::tie(x1, y1) = outer(x0, y0);
+            float dx = x0 - x1, dy = y0 - y1;
+            return -std::sqrt(dx * dx + dy * dy);
+        }
+    }
+};

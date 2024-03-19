@@ -9,17 +9,18 @@
 enum class ScalarF { Power, Exp };
 
 #define SCALAR_POTENTIAL_TYPE ScalarF::Exp
-#define BSHAPE BoundaryC
+#define BSHAPE BoundaryE
 
 
 // Basic options. Varies from one experiment to another.
 
-#define PARTICLE_NUM 1000
+#define PARTICLE_NUM 200
 #define ASSEMBLY_NUM 5
 #define SPHERE_DIST 1.0f
-#define INIT_BOUNDARY 22 * 4
-#define COMPRESSION_RATE 0.04 * 4
-#define NUM_COMPRESSIONS 250
+#define BOUNDARY_A 17 * 3
+#define BOUNDARY_B 11.3 * 3
+#define COMPRESSION_RATE 0.01 * 3
+#define NUM_COMPRESSIONS 800
 #define OUTPUT_STRIDE 1
 #define MAX_INIT_ITERATIONS 20000
 #define MAX_ITERATIONS 10000

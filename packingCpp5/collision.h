@@ -74,7 +74,7 @@ void _boundaryCollisionDetectC(Boundary* b, float* x, MySparseVector<mN, Triplet
 	float* y = x + mN;
 	for (int i = 0; i < mN; i++) {
 		float h = b->h(x[i], y[i]);		// call the distance to boundary function
-		if (h < 1) {
+		if (h < 1) {					// default: h = 2
 			dst->link(i, h, x[i], y[i]);
 		}
 	}

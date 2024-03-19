@@ -62,7 +62,7 @@ public:
 	std::string datetime;		// MM DD hh mm
 
 	float step_size;
-	float initial_boundary_radius;
+	float boundary_a, boundary_b;
 	float boundary_compression_rate;
 
 	std::vector<float> final_energy_curve;
@@ -72,7 +72,8 @@ public:
 		this->datetime = getDateTime();
 		this->name = randomString(4);
 		this->step_size = CLASSIC_STEP_SIZE;
-		this->initial_boundary_radius = INIT_BOUNDARY;
+		this->boundary_a = BOUNDARY_A;
+		this->boundary_b = BOUNDARY_B;
 		this->boundary_compression_rate = COMPRESSION_RATE;
 	}
 	void output() {
@@ -89,11 +90,16 @@ public:
 		js["particle number"] = N;
 		js["assembly number"] = ASSEMBLY_NUM;
 		js["sphere distance"] = SPHERE_DIST;
+
 		js["particle aspect ratio"] = (float)(ASSEMBLY_NUM - 1) / 2;
 		js["particle size a"] = (float)(ASSEMBLY_NUM - 1) / 2;
 		js["particle size b"] = 1;
+
+		js["boundary aspect ratio"] = (float)BOUNDARY_A / BOUNDARY_B;
+		js["boundary size a"] = BOUNDARY_A;
+		js["boundary size b"] = BOUNDARY_B;
+
 		js["step size"] = step_size;
-		js["initial boundary radius"] = initial_boundary_radius;
 		js["boundary compression rate"] = boundary_compression_rate;
 		std::vector<float> temp(final_energy_curve.begin(), final_energy_curve.end());
 		js["energy curve"] = temp;

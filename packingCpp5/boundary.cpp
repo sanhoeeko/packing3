@@ -1,5 +1,4 @@
 #include "boundary.h"
-#include "solver.h"
 
 void Boundary::define_scalar_radius(float r)
 {
@@ -38,6 +37,7 @@ BoundaryE::BoundaryE(float a, float b)
     this->a = a; this->b = b;
     define_scalar_radius(b);
     this->aspect_ratio = a / b;
+    this->sol = BESolver(a, b);
 }
 
 Grid* BoundaryE::getGrid()
@@ -50,18 +50,15 @@ void BoundaryE::step(float compression_rate)
     this->scalar_radius -= compression_rate;
     this->b -= compression_rate;
     this->a -= aspect_ratio * compression_rate;
+    sol = BESolver(a, b);   // Do not forget to update the solver since there is one!
 }
 
 float BoundaryE::h(float x, float y)
 {
-    static float c2 = this->a * this->a - this->b * this->b;
-    float estimate_alpha = atan(abs(y / (aspect_ratio * x)));   // |estimate_t - t| is a 
-    float estimate_t = tan(estimate_alpha / 2);
-    float by = this->b * y; 
-    float a3 = 2 * (c2 + this->a * x);
-    float a1 = 2 * (-c2 + this->a * x);
-    float t = solveQuarticNewton(-by, a3, 0, a1, by, estimate_t);
-    float dx = x - this->a * cos(t);
-    float dy = y - this->b * sin(t);
-    return sqrt(dx * dx + dy * dy);
+    if (sol.gate(x, y)) {
+        return sol.h(x, y);
+    }
+    else {
+        return 2.0f;
+    }
 }

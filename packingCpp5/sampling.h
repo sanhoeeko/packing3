@@ -126,12 +126,9 @@ void randomInitSE(float* x, float a, float b) {
 
 // Interfaces
 
-template<int m, int N, typename bt>
-void RandomInit(State<m, N, bt>* state);
-
-template<int m, int N, typename bt> void RandomInit(StateC<m, N>* state) {
+template<int m, int N> void RandomInit(StateC<m, N>* state) {
 	randomInitSC<N>(state->q->data(), state->boundary->radius);
 }
-template<int m, int N, typename bt> void RandomInit(StateE<m, N>* state) {
-	randomInitSE<N>(state->q->data(), state->boundary->b);
+template<int m, int N> void RandomInit(StateE<m, N>* state) {
+	randomInitSE<N>(state->q->data(), state->boundary->a, state->boundary->b);
 }

@@ -119,7 +119,7 @@ StateInfo<m, N, bt> CreateRandomState(float initial_boundary_a, float initial_bo
 	bt* b = new bt(initial_boundary_a, initial_boundary_b);
 	SphereChain<m>* sphere_chain = new SphereChain<m>(SPHERE_DIST);
 	State<m, N, bt>* state = new State<m, N, bt>(b, sphere_chain);
-	RandomInit<m, N, bt>(state);
+	RandomInit<m, N>(state);
 	return StateInfo<m, N, bt>(state);
 }
 

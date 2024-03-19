@@ -37,15 +37,14 @@ def calPsi6(r, rjs: list, order):
 
 
 class Configuration:
-    def __init__(self, xs: np.ndarray, ys: np.ndarray, thetas:np.ndarray, L):
+    def __init__(self, xs: np.ndarray, ys: np.ndarray, thetas: np.ndarray, L):
         self.xs = xs
         self.ys = ys
         self.thetas = thetas
-        self.L = L
-        self.Lsq = (1 - self.L - dist_tol) ** 2
+        self.L = L                  # the scalar radius, defined as "boundary b" in ellipse case
         self.n = len(self.xs)
-        self.Rij = self.getRij()
-        self.Ri = self.getRi()
+        # self.Rij = self.getRij()
+        # self.Ri = self.getRi()
 
     @lru_cache(maxsize=None)
     def getRij(self):
@@ -117,21 +116,6 @@ class Configuration:
         """
         for i, v in zip(self.Ri.row, self.Ri.data):
             yield i, v
-
-    @lru_cache(maxsize=None)
-    def calEnergy(self):
-        pass
-
-    @lru_cache(maxsize=None)
-    def totalEnergy(self):
-        tot_energy = np.sum(self.calEnergy())
-        energy_error = self.energy_ref - tot_energy
-        print(f"total energy: {tot_energy}, error: {energy_error}")
-        return tot_energy
-
-    @lru_cache(maxsize=None)
-    def calForce(self):
-        pass
 
 
 class DiskData(Configuration):
@@ -220,8 +204,6 @@ class DiskNumerical(DiskData):
     def number_density(self):
         return self.n / (pi * self.L ** 2)
     
-    # new features
-    
     @lru_cache(maxsize=None)
     def calOrientationOrder(self):
         # not 'bond orientational order'
@@ -254,30 +236,3 @@ class DiskNumerical(DiskData):
         phi = self.thetas % pi - ave_theta
         S = np.mean(3 * np.cos(phi) ** 2 - 1) * 0.5
         return S
-    
-    
-    '''
-    @lru_cache(maxsize=None)
-    def calForceNetwork(self) -> np.ndarray:
-        """
-        :return: symmetric dense matrix
-        """
-        raise NotImplementedError
-
-    @lru_cache(maxsize=None)
-    def calForceDistribution(self):
-        raise NotImplementedError()
-
-    @lru_cache(maxsize=None)
-    def calHessian(self):
-        raise NotImplementedError()
-        
-    @lru_cache(maxsize=None)
-    def calHessianEigenValues(self):
-        """
-        :return: array of sorted eigen values of the Hessian matrix
-        """
-        hessian = self.calHessian()
-        s, j = np.linalg.eig(hessian)
-        return np.sort(np.real(s))
-    '''

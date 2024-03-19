@@ -1,19 +1,36 @@
-from functools import lru_cache
-
 from cmapy import cmap
 from scipy.sparse import coo_matrix
 
 from colorbar import draw_colorbar
 from cv_assist import *
 from visualization_numerical import DiskNumerical
-import numpy as np
+
 
 class SphereAssembly:
-    def __init__(self, centers:list):
+    def __init__(self, centers: list):
         self.centers = np.asarray(centers).T
-        
+
+
+class ScaleHelper:
+    def __init__(self, rate, LaM, LbM):
+        self.rate = rate
+        self.LaM, self.LbM = LaM, LbM
+        self.shape = (round(LaM * rate), round(LbM * rate))
+        self.shapeT2 = (round(LbM * rate * 2), round(LaM * rate * 2))
+
+    # cannot cache: unhashable type: np.ndarray
+    def scaleVector(self, x):
+        return np.round(self.rate * x).astype(int)
+
+    def scaleVector_keepFloat(self, x):
+        return self.rate * x
+
+    def scalePosition(self, x, y):
+        return np.round(self.rate * (x + self.LaM)).astype(int), np.round(self.rate * (y + self.LbM)).astype(int)
+
+
 def getSphereChain(n, sphere_dist):
-    x0 = -(n - 1)/2 * sphere_dist
+    x0 = -(n - 1) / 2 * sphere_dist
     return SphereAssembly([(i * sphere_dist + x0, 0) for i in range(n)])
 
 
@@ -36,54 +53,51 @@ def prepare_data_continuum(data: np.ndarray):
 
 
 class DiskPainter(DiskNumerical):
-    def __init__(self, json_data, metadata, dst_folder: str):
+    def __init__(self, json_data, metadata, dst_folder: str, sz=500):
         super(DiskPainter, self).__init__(json_data)
-        self.L_max = metadata['initial boundary radius']
+        self.LaM = metadata['boundary size a']
+        self.LbM = metadata['boundary size b']
+        self.Gamma = self.LaM / self.LbM
+        self.La = self.Gamma * self.L
+        self.Lb = self.L  # the scalar radius
         self.dst_folder = dst_folder
         self.ass_n = metadata['assembly number']
         self.sph_dist = metadata['sphere distance']
         self.ass = getSphereChain(self.ass_n, self.sph_dist)
+        self.pshape = np.array(((self.ass_n - 1) / 2 * self.sph_dist + 1, 1))
+        self.particle_c = sqrt((self.ass_n - 1) * self.sph_dist * (1 + (self.ass_n - 1) * self.sph_dist / 4))
+        self.height = sz
+        self.helper = ScaleHelper(self.height / self.LbM, self.LaM, self.LbM)
+        self.relative_helper = ScaleHelper(self.height / self.Lb, self.La, self.Lb)
 
-    @lru_cache(maxsize=None)
-    def scaling_factor(self, size):
-        return size / self.L_max / 2
+    def drawBoundary(self, img):
+        img.ellipse((self.helper.shape[0], self.helper.shape[1], 0),
+                    (self.helper.scaleVector(self.La), self.helper.scaleVector(self.Lb)),
+                    getColor(-1), 2)
 
-    # cannot be cached, because input parameters include unhashable type: np.ndarray.
-    def scale(self, x, size):
-        return list(map(int, (x + self.L_max) * self.scaling_factor(size)))
+    def drawBoundaryRelative(self, img):
+        img.ellipse((self.relative_helper.shape[0], self.relative_helper.shape[1], 0),
+                    (self.relative_helper.scaleVector(self.La), self.relative_helper.scaleVector(self.Lb)),
+                    getColor(-1), 2)
 
-    # cannot be cached, because input parameters include unhashable type: np.ndarray.
-    def full_scale(self, x, size):
-        y = (self.L_max / self.L) * x
-        return list(map(int, (y + self.L_max) * self.scaling_factor(size)))
-
-    def full_scale_f(self, x, size):
-        """
-        :return: return float data, instead of int.
-        """
-        y = (self.L_max / self.L) * x
-        return (y + self.L_max) * self.scaling_factor(size)
-
-    def plotDiscrete__(self, data, prefix: str, sz=1000):
+    def plotDiscrete__(self, data, prefix: str):
         """
         Visualize discrete data.
         """
-        sf = self.scaling_factor(sz)
-        X = self.scale(self.xs, sz)
-        Y = self.scale(self.ys, sz)
+        X, Y = self.helper.scalePosition(self.xs, self.ys)
         A = self.thetas
-        centers = self.ass.centers * sf
-        r = int(sf)
+        centers = self.helper.scaleVector_keepFloat(self.ass.centers)
+        r = self.helper.scaleVector(1)
 
-        img = FastImage(sz, sz)
-        img.circle((sz // 2, sz // 2), round(self.L * sf), getColor(-1), 2)
+        img = FastImage(*self.helper.shapeT2)
+        self.drawBoundary(img)
 
         for i in range(self.n):
             img.sphere_chain((X[i], Y[i], A[i]), centers, r, getColor(data[i]), 1)
 
         cv.imwrite(self.dst_folder + prefix + str(self.idx) + '.jpg', img.toImg())
 
-    def plotContinuum__(self, data, color_map_name: str, prefix: str, sz=1000, fast_mode=True):
+    def plotContinuum__(self, data, color_map_name: str, prefix: str, fast_mode=True):
         """
         Visualize continuum data.
         """
@@ -92,49 +106,41 @@ class DiskPainter(DiskNumerical):
         color_map = cmap(color_map_name)
         colors = cv.applyColorMap(data, color_map).reshape(-1, 3)
 
-        sf = self.scaling_factor(sz)
-        X = self.scale(self.xs, sz)
-        Y = self.scale(self.ys, sz)
+        X, Y = self.helper.scalePosition(self.xs, self.ys)
         A = self.thetas
-        eshape = tuple(np.round(sf * self.pshape).astype(int))
+        centers = self.helper.scaleVector_keepFloat(self.ass)
+        r = self.helper.scaleVector(1)
 
-        img = FastImage(sz, sz) if fast_mode else ProjectiveImage(sz, sz)
-        img.circle((sz // 2, sz // 2), round(self.L * sf), getColor(-1), 2)
+        img = FastImage(*self.helper.shapeT2) if fast_mode else ProjectiveImage(*self.helper.shapeT2)
+        self.drawBoundary(img)
 
-        if self.ptype == 'DoubleSphere':
-            for i in range(self.n):
-                img.double_sphere((X[i], Y[i], A[i]), eshape, toTuple(colors[i]), 1)
-        elif self.ptype == 'ECP-Ellipse':
-            for i in range(self.n):
-                img.ellipse((X[i], Y[i], A[i]), eshape, toTuple(colors[i]), -1)
-                img.ellipse((X[i], Y[i], A[i]), eshape, getColor(-1), 1)
+        for i in range(self.n):
+            img.sphere_chain((X[i], Y[i], A[i]), centers, r, toTuple(colors[i]), 1)
 
         # reserve space for color bar
-        img = img.toImg()
-        bar = np.full((sz, int(sz * 0.2), 3), 255, dtype=np.uint8)
+        szb = self.helper.shapeT2[0]
+        bar = np.full((szb, int(szb * 0.2), 3), 255, dtype=np.uint8)
         img = np.hstack((img, bar))
 
         # draw color bar
         img = draw_colorbar(img, color_map, min_value, max_value)
         cv.imwrite(self.dst_folder + prefix + str(self.idx) + '.jpg', img)
 
-    def plotDiscreteDots__(self, data, prefix: str, sz=1000):
+    def plotDiscreteDots__(self, data, prefix: str):
         """
         Visualize discrete data using non-scaling dots diagram.
         """
-        X = self.full_scale(self.xs, sz)
-        Y = self.full_scale(self.ys, sz)
+        X, Y = self.relative_helper.scalePosition(self.xs, self.ys)
         A = self.thetas
-        img = FastImage(sz, sz)
-        img.circle((sz // 2, sz // 2), sz // 2, getColor(-1), 2)
-        eshape = tuple(np.round(self.scaling_factor(sz) * self.pshape).astype(int))
-        c = round(sqrt(eshape[0] ** 2 - eshape[1] ** 2))
+        img = FastImage(*self.relative_helper.shapeT2)
+        self.drawBoundaryRelative(img)
 
         for i in range(self.n):
-            img.sphericalCylinder(np.array((X[i], Y[i])), A[i], c, getColor(data[i]), eshape[1])
+            img.sphericalCylinder(np.array((X[i], Y[i])), A[i], self.helper.scaleVector(self.particle_c),
+                                  getColor(data[i]), self.scaleVector(1))
         cv.imwrite(self.dst_folder + prefix + str(self.idx) + '.jpg', img.toImg())
 
-    def plotContinuumDots__(self, data, color_map_name: str, prefix: str, sz=1000, save=True):
+    def plotContinuumDots__(self, data, color_map_name: str, prefix: str, save=True):
         """
         Visualize continuum data using non-scaling dots diagram.
         """
@@ -142,20 +148,19 @@ class DiskPainter(DiskNumerical):
         color_map = cmap(color_map_name)
         colors = cv.applyColorMap(data, color_map).reshape(-1, 3)
 
-        X = self.full_scale(self.xs, sz)
-        Y = self.full_scale(self.ys, sz)
+        X, Y = self.relative_helper.scalePosition(self.xs, self.ys)
         A = self.thetas
-        img = FastImage(sz, sz)
-        img.circle((sz // 2, sz // 2), sz // 2, getColor(-1), 2)
-        eshape = tuple(np.round(self.scaling_factor(sz) * self.pshape).astype(int))
-        c = round(sqrt(eshape[0] ** 2 - eshape[1] ** 2))
+        img = FastImage(*self.relative_helper.shapeT2)
+        self.drawBoundaryRelative(img)
 
         for i in range(self.n):
-            img.sphericalCylinder(np.array((X[i], Y[i])), A[i], c, toTuple(colors[i]), eshape[1])
+            img.sphericalCylinder(np.array((X[i], Y[i])), A[i], self.helper.scaleVector(self.particle_c),
+                                  toTuple(colors[i]), self.helper.scaleVector(1))
 
         # reserve space for color bar
         img = img.toImg()
-        bar = np.full((sz, int(sz * 0.2), 3), 255, dtype=np.uint8)
+        szb = self.relative_helper.shapeT2[0]
+        bar = np.full((szb, int(szb * 0.2), 3), 255, dtype=np.uint8)
         img = np.hstack((img, bar))
 
         # draw color bar
@@ -165,41 +170,3 @@ class DiskPainter(DiskNumerical):
         else:
             # for further painting, like drawing networks
             return img
-
-    def plotNetwork__(self, img, data, color_map_name: str, prefix: str, sz=1000):
-        """
-        Note that the network plot is dependent of a dot plot. So, an image input is required.
-        """
-        min_value, max_value, data = prepare_data_continuum(data)
-        color_map = cmap(color_map_name)
-        img = FastImage.fromImg(img)
-
-        # construct sparse matrix for easier iterations
-        # np.triu: return upper triangular matrix
-        data_coo = coo_matrix(np.triu(data))
-
-        if data_coo.nnz != 0:
-            colors = cv.applyColorMap(data_coo.data, color_map).reshape(-1, 3)
-            X = self.full_scale_f(self.xs, sz)
-            Y = self.full_scale_f(self.ys, sz)
-            r0 = round(self.scaling_factor(sz) * 0.6)
-
-            cnt = 0
-            for i, j in zip(data_coo.row, data_coo.col):
-                pos1 = np.array((X[i], Y[i]))
-                pos2 = np.array((X[j], Y[j]))
-                img.rod(r0, pos1, pos2, toTuple(colors[cnt]), 4)
-                cnt += 1
-
-            # reserve space for color bar 2
-            img = img.toImg()
-            bar = np.full((sz, int(sz * 0.2), 3), 255, dtype=np.uint8)
-            img = np.hstack((img, bar))
-            # draw color bar
-            img = draw_colorbar(img, color_map, min_value, max_value)
-            cv.imwrite(self.dst_folder + prefix + str(self.idx) + '.jpg', img)
-
-    def plotNetwork_(self, data_arr, data_mat, color_map_name_arr: str, color_map_name_mat: str,
-                     prefix: str, sz=1000):
-        img = self.plotContinuumDots__(data_arr, color_map_name_arr, None, sz, False)
-        self.plotNetwork__(img, data_mat, color_map_name_mat, prefix, sz)

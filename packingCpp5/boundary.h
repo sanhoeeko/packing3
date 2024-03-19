@@ -1,6 +1,7 @@
 #pragma once
 
 #include"grid.h"
+#include"solver.h"
 
 const float particle_radius = 1 + (float)(ASSEMBLY_NUM - 1) / 2 * SPHERE_DIST;
 
@@ -29,6 +30,7 @@ class BoundaryE : public Boundary {
 public:
 	float a, b;
 	float aspect_ratio;
+	BESolver sol;
 
 	BoundaryE(float a, float b);
 	Grid* getGrid();

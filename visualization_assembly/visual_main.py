@@ -1,19 +1,14 @@
-from multiprocessing import Pool
-
-import numpy as np
-import pandas as pd
 import json
-from os import listdir, getcwd
+from multiprocessing import Pool
+from os import getcwd
 
 from visualization import *
-import matplotlib.pyplot as plt
-
 
 dst_dir = '../pyOutput/'
 src_dir = '../packingCpp5'
 
 
-def read_disks_prepare(simu_name:str):
+def read_disks_prepare(simu_name: str):
     # load metadata
     meta_file = '\\'.join([getcwd(), src_dir, simu_name + '.metadata.json'])
     with open(meta_file) as fp:
@@ -58,22 +53,14 @@ def read_disks_sp(metadata, disks_src: list) -> list[Disk]:
     return list(map(initialize_disk, zip(rng, disks_src, meta)))
 
 
-def move_ave(a, n, mode="valid"):
-    # by lines, orthogonal to plt.plot
-    a[np.isnan(a)] = 0.5  # fill nans with default value
-    def single_line_move_ave(a, n, mode):
-        return(np.convolve(a, np.ones((n,))/n, mode=mode))
-    return np.array([single_line_move_ave(x, n, mode) for x in a])
-
-
-simu_name = 'rnfq'
+simu_name = 'kolu'
 
 if __name__ == '__main__':
 
     ifplot = True
 
     disks_src, metadata = read_disks_prepare(simu_name)
-    disks = read_disks_mp(metadata, disks_src)
+    disks = read_disks_sp(metadata, disks_src)
     energy_curve = metadata['energy curve']
     descent_curves = []
     orientation_order_dist = []
@@ -91,28 +78,28 @@ if __name__ == '__main__':
         orientation_order_dist.append(d.calOrientationOrder())
         best_angles.append(d.meanOrientation())
         nematic_orders.append(d.nematicOrder())
-        #density_curve.append(d.number_density())
-        #p6s.append(d.averageBondOrientationalOrder(6))
-        #p4s.append(d.averageBondOrientationalOrder(4))
+        # density_curve.append(d.number_density())
+        # p6s.append(d.averageBondOrientationalOrder(6))
+        # p4s.append(d.averageBondOrientationalOrder(4))
 
         if ifplot:
-            disks[i].plotConfigurationOnly()
-            #disks[i].plotOrientationAngles(True)
-            #disks[i].plotVoronoiNeighbors(False)
-            #disks[i].plotPsi6(True)
-            #disks[i].plotPsi5(True)
-            #disks[i].plotPsi4(True)
-            #disks[i].plotForceNetwork()
-            
+            # disks[i].plotConfigurationOnly()
+            disks[i].plotOrientationAngles(True)
+            disks[i].plotVoronoiNeighbors(False)
+            # disks[i].plotPsi6(True)
+            # disks[i].plotPsi5(True)
+            # disks[i].plotPsi4(True)
+            # disks[i].plotForceNetwork()
+
     # mat = np.array(orientation_order_dist).T
     # mat = move_ave(mat, 40).T
-    
-    #plt.rcParams.update({"font.size":22})
+
+    # plt.rcParams.update({"font.size":22})
     plotEnergySplit(descent_curves[1:])
-    #plt.ylim((-1, 0.5))
-    #plt.xlabel('relaxation iterations t')
-    #plt.ylabel('y(t)')
-            
+    # plt.ylim((-1, 0.5))
+    # plt.xlabel('relaxation iterations t')
+    # plt.ylabel('y(t)')
+
     '''
     plt.rcParams.update({"font.size":22})
     plt.plot(density_curve, p6s, 'x')

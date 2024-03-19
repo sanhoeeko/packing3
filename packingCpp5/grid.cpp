@@ -25,11 +25,13 @@ int Grid::ylocate(float y) {
 	return (int)floor(y / a) + yshift;
 }
 void Grid::add(int i, int j, int particle_id) {
-	(this->p + i * cols + j)->push_back(particle_id);
+	// x -->j, y -->i is the correct order
+	(this->p + j * cols + i)->push_back(particle_id);
 }
 ivector<int, MAX_CONTACT_NUMBER>* Grid::loc(int i, int j){
+	// x -->j, y -->i is the correct order
 	// Do not use this, because it is slow.
-	return this->p + i * cols + j;
+	return this->p + j * cols + i;
 }
 void Grid::clear() {
 	auto ptr = p;
