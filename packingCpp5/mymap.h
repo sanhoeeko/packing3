@@ -124,12 +124,12 @@ struct IntMap{
 	t* data;
 
 	IntMap() {
-		occupied = new bool[n]; memset(occupied, false, n * sizeof(bool));
-		data = new t[n];
+		occupied = (bool*)calloc(n, sizeof(bool));
+		data = (t*)malloc(n * sizeof(t));
 	}
 	IntMap(const IntMap& src) {
-		occupied = new bool[n];
-		data = new t[n];
+		occupied = (bool*)malloc(n * sizeof(bool));
+		data = (t*)malloc(n * sizeof(t));
 		memcpy(occupied, src.occupied, n * sizeof(bool));
 		memcpy(data, src.data, n * sizeof(t));
 	}
@@ -139,7 +139,7 @@ struct IntMap{
 		return *this;
 	}
 	~IntMap() {
-		delete[] occupied; delete[] data;
+		free(occupied); free(data);
 	}
 
 	void clear() {
