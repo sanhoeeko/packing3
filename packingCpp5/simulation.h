@@ -37,7 +37,7 @@ struct Simulation{
 			current_step_size = MAX_STEP_SIZE;
 			double tc;
 			RecordTime(tc,
-				InnerLoopData data = loop_custom(MAX_ITERATIONS);
+				InnerLoopData data = loop_classic(MAX_ITERATIONS);
 			)
 #ifdef RECORD_TIME
 			double speed = data.iterations / tc;

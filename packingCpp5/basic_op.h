@@ -66,12 +66,12 @@ float _calEnergy_from_dist(DistInfo<m* N>* rs) {
 	return energy_pp + energy_pw;
 }
 
-Eigen::Vector2f singleForcePP(Triplet& rxy) {
+inline Eigen::Vector2f singleForcePP(Triplet& rxy) {
 	float fr = V.dpp_r(rxy.r);
 	return { fr * rxy.x,fr * rxy.y };
 }
 
-Eigen::Vector2f singleForcePW(TripletB& hxy) {
+inline Eigen::Vector2f singleForcePW(TripletB& hxy) {
 	float r = sqrt(hxy.x * hxy.x + hxy.y * hxy.y);
 	float fr = V.dpw(hxy.h) / r;
 	return { fr * hxy.x,fr * hxy.y };
@@ -79,12 +79,10 @@ Eigen::Vector2f singleForcePW(TripletB& hxy) {
 
 template<int m, int N, typename bt>
 Vecf<2 * N * m> _calForce_from_dist(DistInfo<m* N>* rs, SphereAssembly<m>* sa) {
-	static auto fpp = std::function<Eigen::Vector2f(Triplet&)>(singleForcePP);
-	static auto fpw = std::function<Eigen::Vector2f(TripletB&)>(singleForcePW);
 	// particle-particle force
-	Vecf<2 * N * m> forces_pp = rs->distpp->apply(fpp).rowwiseSumAsym().toVector();
+	Vecf<2 * N * m> forces_pp = rs->distpp->apply(singleForcePP).rowwiseSumAsym().toVector();
 	// particle-wall force
-	Vecf<2 * N * m> forces_pw = rs->distpw->apply(fpw).toVector();
+	Vecf<2 * N * m> forces_pw = rs->distpw->apply(singleForcePW).toVector();
 	Vecf<2 * N * m> forces = forces_pp + forces_pw;
 	return forces;
 }

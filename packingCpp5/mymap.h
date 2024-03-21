@@ -1,6 +1,5 @@
 #pragma once
 
-#include<functional>
 #include<tuple>
 
 /*
@@ -71,7 +70,7 @@ struct IntPairMap{
 		throw "Key not exists";
 	}
 	template<typename s>
-	IntPairMap<n, threads, s> apply(std::function<s(t&)> f) const & {
+	IntPairMap<n, threads, s> apply(s(*f)(t&)) const & {
 		int capacity = n * threads;
 		IntPairMap<n, threads, s> res;
 		memcpy(res.secs, this->secs, capacity * sizeof(std::pair<int, int>));
@@ -173,7 +172,7 @@ struct IntMap{
 		}
 	}
 	template<typename s>
-	IntMap<n, s> apply(std::function<s(t&)> f) const& {
+	IntMap<n, s> apply(s(*f)(t&)) const& {
 		IntMap<n, s> res;
 		memcpy(res.occupied, this->occupied, n * sizeof(bool));
 		for (int i = 0; i < n; i++) {

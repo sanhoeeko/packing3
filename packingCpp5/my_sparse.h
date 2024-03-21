@@ -4,7 +4,6 @@
 #include"boundary.h"
 #include"mymap.h"
 #include"ivector.h"
-#include<functional>
 
 struct Triplet{
     float r, x, y;
@@ -23,7 +22,7 @@ struct MySparseVectorBase {
         dict.clear();
     }
     template<typename result_t>
-    MySparseVector<Nm, result_t> apply(std::function<result_t(t&)> f) {
+    MySparseVector<Nm, result_t> apply(result_t(*f)(t&)) {
         MySparseVector<Nm, result_t> res;
         res.dict = dict.apply(f);
         return res;
@@ -74,7 +73,7 @@ struct MySparseMatrixBase {
         dict.clear();
     }
     template<typename result_t>
-    MySparseMatrix<Nm, result_t> apply(std::function<result_t(t&)> f) const & {
+    MySparseMatrix<Nm, result_t> apply(result_t(*f)(t&)) const & {
         // input: a function [fx, fy] = f(r, x, y) to calculate forces
         MySparseMatrix<Nm, result_t> res;
         res.dict = this->dict.apply(f);     // note this "=". [operator=] of [IntPairMap] must be overloaded!!
