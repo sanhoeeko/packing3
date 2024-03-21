@@ -47,16 +47,16 @@ struct MySparseVector<Nm, TripletB> : MySparseVectorBase<Nm, TripletB> {
 };
 
 template<int Nm>
-struct MySparseVector<Nm, Eigen::Vector2f> : MySparseVectorBase<Nm, Eigen::Vector2f> {
+struct MySparseVector<Nm, v2> : MySparseVectorBase<Nm, v2> {
 
-    MySparseVector<Nm, Eigen::Vector2f>() {
-        memset(this->dict.data, 0, Nm * sizeof(Eigen::Vector2f));
+    MySparseVector<Nm, v2>() {
+        memset(this->dict.data, 0, Nm * sizeof(v2));
     }
     Vecf<2 * Nm> toVector() {
         Vecf<2 * Nm> res; res.setZero();
-        for (IntMapIterator<Nm, Eigen::Vector2f> it(this->dict); it.goes(); ++it) {
-            res(it.i) = (*it.val())(0);
-            res(it.i + Nm) = (*it.val())(1);
+        for (IntMapIterator<Nm, v2> it(this->dict); it.goes(); ++it) {
+            res(it.i) = it.val()->x;
+            res(it.i + Nm) = it.val()->y;
         }
         return res;
     }
@@ -79,12 +79,18 @@ struct MySparseMatrixBase {
         res.dict = this->dict.apply(f);     // note this "=". [operator=] of [IntPairMap] must be overloaded!!
         return res;
     }
+    MySparseMatrix<Nm, v2> applyFishing(void (*f)(t&, float&, float&)) const& {
+        // input: a function void f(r, x, y, [fx, fy]) to calculate forces
+        MySparseMatrix<Nm, v2> res;
+        res.dict = this->dict.applyFishing(f);
+        return res;
+    }
     MySparseVector<Nm, t> rowwiseSumAsym() {
         MySparseVector<Nm, t> res;
         for (IntPairMapIterator<Nm, MAX_CONTACT_NUMBER, t> it(dict); it.goes(); ++it) {
             int i, j; t* pvalue;
             std::tie(i, j, pvalue) = it.val();
-            res.dict.add(i, -*pvalue);      // only for MySparseVector<Nm, t> t=Eigen::Vector2f, which has zero initialization
+            res.dict.sub(i, *pvalue);      // only for MySparseVector<Nm, t> t=v2, which has zero initialization
             res.dict.add(j, *pvalue);
         }
         return res;

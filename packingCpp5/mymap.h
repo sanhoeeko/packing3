@@ -1,6 +1,23 @@
 #pragma once
 
+#include"defs.h"
 #include<tuple>
+
+struct v2 {
+	float x, y;
+	v2 operator+(const v2& v) {
+		return { x + v.x,y + v.y };
+	}
+	v2 operator-(const v2& v) {
+		return { x - v.x,y - v.y };
+	}
+	void operator+=(const v2& v) {
+		x += v.x; y += v.y;
+	}
+	void operator-=(const v2& v) {
+		x -= v.x; y -= v.y;
+	}
+};
 
 /*
 	an analog of unordered_map<std::pair<int, int>, t>
@@ -71,12 +88,26 @@ struct IntPairMap{
 	}
 	template<typename s>
 	IntPairMap<n, threads, s> apply(s(*f)(t&)) const & {
+		// slow
 		int capacity = n * threads;
 		IntPairMap<n, threads, s> res;
 		memcpy(res.secs, this->secs, capacity * sizeof(std::pair<int, int>));
 		memcpy(res.sizes, this->sizes, n * sizeof(int));
 		for (int i = 0; i < cnt; i++) {
 			res.data[i] = f(this->data[i]);
+		}
+		res.cnt = this->cnt;
+		return res;
+	}
+	IntPairMap<n, threads, v2> applyFishing(void (*f)(t&, float&, float&)) const& {
+		// faster, because prevent a construction and a deconstruction
+		// Update: not so fast as imagination
+		int capacity = n * threads;
+		IntPairMap<n, threads, v2> res;
+		memcpy(res.secs, this->secs, capacity * sizeof(std::pair<int, int>));
+		memcpy(res.sizes, this->sizes, n * sizeof(int));
+		for (int i = 0; i < cnt; i++) {
+			f(this->data[i], res.data[i].x, res.data[i].y);
 		}
 		res.cnt = this->cnt;
 		return res;
@@ -161,6 +192,10 @@ struct IntMap{
 	void add(int i, const t& val) {
 		occupied[i] = true;
 		data[i] += val;
+	}
+	void sub(int i, const t& val) {
+		occupied[i] = true;
+		data[i] -= val;
 	}
 	void add_or_insert(int i, const t& val) {
 		// slow?

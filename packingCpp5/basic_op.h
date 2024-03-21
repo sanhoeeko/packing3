@@ -66,12 +66,17 @@ float _calEnergy_from_dist(DistInfo<m* N>* rs) {
 	return energy_pp + energy_pw;
 }
 
-inline Eigen::Vector2f singleForcePP(Triplet& rxy) {
+inline v2 singleForcePP(Triplet& rxy) {
 	float fr = V.dpp_r(rxy.r);
 	return { fr * rxy.x,fr * rxy.y };
 }
 
-inline Eigen::Vector2f singleForcePW(TripletB& hxy) {
+inline void singleForcePP_fishing(Triplet& rxy, float& fx, float& fy) {
+	float fr = V.dpp_r(rxy.r);
+	fx = fr * rxy.x;  fy = fr * rxy.y;
+}
+
+inline v2 singleForcePW(TripletB& hxy) {
 	float r = sqrt(hxy.x * hxy.x + hxy.y * hxy.y);
 	float fr = V.dpw(hxy.h) / r;
 	return { fr * hxy.x,fr * hxy.y };
