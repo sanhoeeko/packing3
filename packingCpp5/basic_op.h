@@ -77,9 +77,8 @@ inline void singleForcePP_fishing(Triplet& rxy, float& fx, float& fy) {
 }
 
 inline v2 singleForcePW(TripletB& hxy) {
-	float r = sqrt(hxy.x * hxy.x + hxy.y * hxy.y);
-	float fr = V.dpw(hxy.h) / r;
-	return { fr * hxy.x,fr * hxy.y };
+	float fr = V.dpw(hxy.h);
+	return { -fr * hxy.x,-fr * hxy.y };
 }
 
 template<int m, int N, typename bt>

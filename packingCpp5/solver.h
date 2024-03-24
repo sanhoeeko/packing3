@@ -6,7 +6,7 @@
 #include <functional>
 
 const float precision = 1e-2f;
-const int tangents_num = 3;
+const int tangents_num = 4;
 
 struct BESolver {
     float a, b;
@@ -27,6 +27,12 @@ struct BESolver {
             If gate -> false, the particle is not possible be to in contact with the wall.
         */
         return x0 * x0 / sub_a2 + y0 * y0 / sub_b2 > 1;
+    }
+
+    void normalVector(float x, float y, float& nx, float& ny) {
+        float factor = 1 / sqrt(b4 * x * x + a4 * y * y);
+        nx = -b2 * x * factor;
+        ny = -a2 * y * factor;
     }
 
     std::pair<float,float> make_first_estimate(float x0, float y0) {
@@ -87,19 +93,21 @@ struct BESolver {
         return std::make_pair(x1, y1);
     }
 
-    float h(float x0, float y0) {
-        x0 = std::abs(x0); y0 = std::abs(y0);
+    bool h(float _x0, float _y0, float& _x1, float& _y1) {
+        float x0 = std::abs(_x0), y0 = std::abs(_y0);
+        static float x1, y1;
         x02 = x0 * x0; y02 = y0 * y0;           // update x02, y02 at once, before the first estimation.
-        float x1, y1;
         if (x02 / a2 + y02 / b2 < 1) {
-            std::tie(x1, y1) = inner(x0, y0);
-            float dx = x0 - x1, dy = y0 - y1;
-            return std::sqrt(dx * dx + dy * dy);
+            std::tie(x1, y1) = inner(x0, y0);   // x1, y1 is in the first quadrant
+            _x1 = _x0 > 0 ? x1 : -x1;
+            _y1 = _y0 > 0 ? y1 : -y1;
+            return true;
         }
         else {
             std::tie(x1, y1) = outer(x0, y0);
-            float dx = x0 - x1, dy = y0 - y1;
-            return -std::sqrt(dx * dx + dy * dy);
+            _x1 = _x0 > 0 ? x1 : -x1;
+            _y1 = _y0 > 0 ? y1 : -y1;
+            return false;
         }
     }
 };

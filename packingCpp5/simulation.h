@@ -65,6 +65,8 @@ struct Simulation{
 			energy = Step(state_info, current_step_size);
 			energy_curve->push_back(energy);
 			if (energy < ENERGY_EPS)break;
+			float gm = GradientMaxAbs<PARTICLE_NUM>(state_info.gradient);
+			if (gm < CEASE_FORCE)break;
 		}
 		return { i, energy };
 	}

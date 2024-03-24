@@ -25,9 +25,11 @@ void BoundaryC::step(float compression_rate)
     this->radius = this->scalar_radius;
 }
 
-float BoundaryC::h(float x, float y)
+std::tuple<float, float, float> BoundaryC::h(float x, float y)
 {
-    return this->radius - sqrt(x * x + y * y);
+    // return format: h, x, y
+    float r = sqrt(x * x + y * y);
+    return { this->radius - r, x / r, y / r };
 }
 
 // Ellipse Boundary
@@ -53,12 +55,28 @@ void BoundaryE::step(float compression_rate)
     sol = BESolver(a, b);   // Do not forget to update the solver since there is one!
 }
 
-float BoundaryE::h(float x, float y)
+std::tuple<float, float, float> BoundaryE::h(float x, float y)
 {
+    // return format: h, x, y
+    static float Tx, Ty;
     if (sol.gate(x, y)) {
-        return sol.h(x, y);
+        bool is_in_ellipse = sol.h(x, y, Tx, Ty);
+        float dx = std::abs(x - Tx), dy = std::abs(y - Ty);
+        float abs_h = std::sqrt(dx * dx + dy * dy);
+        if (abs_h < 1e-4) {
+            float nx, ny; sol.normalVector(x, y, nx, ny);
+            return { 0, nx, ny };
+        }
+        else {
+            if (is_in_ellipse) {
+                return{ abs_h, (x > 0 ? -dx / abs_h : dx / abs_h), (y > 0 ? -dy / abs_h : dy / abs_h) };
+            }
+            else {
+                return{ -abs_h, (x > 0 ? -dx / abs_h : dx / abs_h), (y > 0 ? -dy / abs_h : dy / abs_h) };
+            }
+        }
     }
     else {
-        return 2.0f;
+        return { 2.0f, 0, 0 };
     }
 }

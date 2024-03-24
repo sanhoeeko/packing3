@@ -72,10 +72,11 @@ void _boundaryCollisionDetectC(Boundary* b, float* x, MySparseVector<mN, Triplet
 		Though it is also collision detection, grid is not necessary.
 	*/
 	float* y = x + mN;
+	static float hi, xi, yi;	// h function returns h value and a unit vector
 	for (int i = 0; i < mN; i++) {
-		float h = b->h(x[i], y[i]);		// call the distance to boundary function
-		if (h < 1) {					// default: h = 2
-			dst->link(i, h, x[i], y[i]);
+		std::tie(hi, xi, yi) = b->h(x[i], y[i]);		// call the distance to boundary function
+		if (hi < 1) {									// default: h = 2
+			dst->link(i, hi, xi, yi);
 		}
 	}
 }
