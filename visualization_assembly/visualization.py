@@ -3,7 +3,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from visualization_paint import DiskPainter
+from visualization_numerical import ConfigurationC
+from visualization_paint import DiskPainter, ScaleHelper
 
 figure_size = 1000
 
@@ -28,19 +29,29 @@ def plotListOfArray(lst: list[np.ndarray]):
 
 
 def plotEnergySplit(curves: list[np.ndarray]):
-    logs = []
+    ys = []
     for cur in curves:
-        lny = np.log(cur)
-        if len(lny) == 0 or np.isnan(lny[0]):
-            continue
-        lny -= lny[0]
-        logs.append(lny)
-    plotListOfArray(logs)
+        if len(cur) == 0: continue
+        y = cur / cur[0] - 1
+        ys.append(y)
+    plotListOfArray(ys)
 
 
 class Disk(DiskPainter):
-    def __init__(self, json_data: dict, metadata: dict, dst_folder: str):
-        super(Disk, self).__init__(json_data, metadata, dst_folder)
+    def __init__(self, json_data: dict, metadata: dict, dst_folder: str, sz=500):
+        super(Disk, self).__init__(json_data, metadata, dst_folder, sz)
+
+    @classmethod
+    def fromConfigurationC(cls, cc: ConfigurationC, ref: 'DiskPainter'):
+        obj = cls(None, None, ref.dst_folder, ref.sz)
+        obj.xs, obj.ys, obj.L, obj.n = cc.xs, cc.ys, cc.L, cc.n
+        obj.idx = ref.idx
+        obj.sz, obj.height = ref.sz, ref.sz
+        obj.La, obj.Lb = ref.La, ref.Lb
+        obj.LaM, obj.LbM = ref.LaM, ref.LbM
+        obj.helper = ScaleHelper(obj.height / obj.LbM, obj.LaM, obj.LbM)
+        obj.relative_helper = ScaleHelper(obj.height / obj.Lb, obj.La, obj.Lb)
+        return obj
 
     def plotDiscrete(self, dots: bool):
         if dots:
@@ -54,26 +65,46 @@ class Disk(DiskPainter):
         else:
             return self.plotContinuum__
 
-    def plotEnergyDistribution(self, dots):
-        self.plotContinuum(dots)(self.calEnergy(), 'Blues', 'e')
+    def plotScalarOrder(self, dots):
+        self.plotContinuum(dots)(self.scalarOrderParameter(), 'Blues', 'e')
 
     def plotPsi6(self, dots):
         self.plotContinuum(dots)(self.calHexatic(6), 'Greens', '6p')
 
+    def plotPsi6AsSpheres(self, dots):
+        spheres = Disk.fromConfigurationC(self.toSpheres(), self)
+        spheres.plotContinuum(dots)(spheres.calHexatic(6), 'Greens', '6ps')
+
     def plotPsi5(self, dots):
-        self.plotContinuum(dots)(self.calHexatic(5), 'PuRd', '5p')
+        self.plotContinuum(dots)(self.calSquarePhase(5), 'PuRd', '5p')
 
     def plotPsi4(self, dots):
-        self.plotContinuum(dots)(self.calHexatic(4), 'Oranges', '4p')
+        self.plotContinuum(dots)(self.calSquarePhase(4), 'Oranges', '4p')
+    
+    def plotPsi4AsSpheres(self, dots):
+        spheres = Disk.fromConfigurationC(self.toSpheres(), self)
+        spheres.plotContinuum(dots)(spheres.calSquarePhase(4), 'Oranges', '4ps')
 
     def plotVoronoiNeighbors(self, dots):
         self.plotDiscrete(dots)(self.calVoronoiNeighbors(), 'v')
-        
+
+    def plotVoronoiAsSpheres(self, dots):
+        spheres = Disk.fromConfigurationC(self.toSpheres(), self)
+        spheres.plotDiscrete(dots)(spheres.calVoronoiNeighbors(), 'vs')
+
     def plotOrientationAngles(self, dots):
-        self.plotContinuum(dots)(self.thetas % np.pi, 'hsv' ,'a')
-        
-    def plotConfigurationOnly(self):
-        self.plotDiscrete(False)([0] * self.n, 'c')
+        self.plotContinuum(dots)(self.thetas % np.pi, 'hsv', 'a')
+
+    def plotConfigurationOnly(self, dots):
+        if self.ass_n > 1:
+            self.plotDiscrete(dots)([3] * self.n, 'c')
+        else:
+            spheres = Disk.fromConfigurationC(self.toSpheres(), self)
+            spheres.plotDiscrete(dots)([3] * self.n, 'c')
+
+    def plotNematicField(self):
+        self.imsaveNematicField('n')
+
 
 '''
     def plotForceNetwork(self):

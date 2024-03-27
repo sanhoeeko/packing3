@@ -1,11 +1,17 @@
 from functools import lru_cache
-from math import acos, sin, pi, atan2, sqrt
+from math import pi, atan2, sqrt
 
 import numpy as np
-import scipy.sparse as ssp
+from scipy.interpolate import griddata
+from scipy.sparse import coo_matrix
+from scipy.sparse.csgraph import connected_components
 from scipy.spatial import Delaunay
+from scipy.stats import norm
 
+import liquid_crystal_pde as pde
 from graph import Graph
+from network_builder import getFineContactMatrix, getBriefContactMatrix
+from scalar_order_parameter import calScalarOrderParameter, calFullScalarOrderParameter
 
 # constants
 SQRT8 = sqrt(8)
@@ -14,16 +20,35 @@ Rsq = (2 - dist_tol) ** 2
 force_range = np.arange(0, 5, 0.01)  # for histogram of force distribution
 
 
-def _applyFuncToSparse(func, cmat: ssp.coo_matrix) -> ssp.coo_matrix:
-    res = cmat.copy()
-    res.data = func(res.data)
-    return res
+def cooLike(coo: coo_matrix, new_data: np.ndarray):
+    return coo_matrix((new_data, (coo.row, coo.col)), shape=coo.shape, dtype=new_data.dtype)
 
 
-def applyFuncToSparse(func, cmat: ssp.coo_matrix) -> np.ndarray:
-    # `.todense()` returns a np.matrix object, whose star operator is matrix multiplication,
-    # but not element-wise multiplication!
-    return _applyFuncToSparse(func, cmat).todense().A
+def cooFilter(coo: coo_matrix, func):
+    triplets = []
+    for i, j, v in zip(coo.row, coo.col, coo.data):
+        if func(v):
+            triplets.append((i, j, v))
+    Is, Js, Vs = list(zip(*triplets))
+    return coo_matrix((Vs, (Is, Js)), shape=coo.shape)
+
+
+def smooth_histogram(values, weights, bins, x_range, sigma=1):
+    def gaussian(x, mu, sigma, scale):
+        return scale * norm.pdf(x, mu, sigma)
+    
+    x = np.linspace(x_range[0], x_range[1], bins)
+    result = np.zeros_like(x)
+    
+    for value, weight in zip(values, weights):
+        result += gaussian(x, value, sigma, weight)
+    
+    return result, x
+
+
+def rotMat(theta):
+    c, s = np.cos(theta), np.sin(theta)
+    return np.array(((c, -s), (s, c)))
 
 
 def calPsi6(r, rjs: list, order):
@@ -36,122 +61,80 @@ def calPsi6(r, rjs: list, order):
     return abs(psi) / len(rjs)
 
 
-class Configuration:
-    def __init__(self, xs: np.ndarray, ys: np.ndarray, thetas: np.ndarray, L):
+class ConfigurationC:
+    def __init__(self, xs: np.ndarray, ys: np.ndarray, L: float):
         self.xs = xs
         self.ys = ys
-        self.thetas = thetas
-        self.L = L                  # the scalar radius, defined as "boundary b" in ellipse case
+        self.L = L  # the scalar radius, defined as "boundary b" in ellipse case
         self.n = len(self.xs)
-        # self.Rij = self.getRij()
-        # self.Ri = self.getRi()
+
+
+class Configuration(ConfigurationC):
+    def __init__(self, json_data, metadata):
+        super(Configuration, self).__init__(
+            np.asarray(json_data['x'], dtype=float),
+            np.asarray(json_data['y'], dtype=float),
+            json_data['scalar radius']
+        )
+        self.thetas = np.asarray(json_data['a'], dtype=float) % np.pi
+        self.LaM = metadata['boundary size a']
+        self.LbM = metadata['boundary size b']
+        self.m = metadata['assembly number']
+        self.Rm = metadata['sphere distance']
+        self.Gamma = self.LaM / self.LbM
+        self.La = self.Gamma * self.L
+        self.Lb = self.L  # the scalar radius
 
     @lru_cache(maxsize=None)
-    def getRij(self):
-        """
-        :return: symmetric sparse matrix of rij
-        """
-        # Do not use for-loop! It is thousands of times slower!
-        dx = self.xs.reshape(1, -1) - self.xs.reshape(-1, 1)
-        dy = self.ys.reshape(1, -1) - self.ys.reshape(-1, 1)
-        r2 = dx ** 2 + dy ** 2
-        r2[r2 > Rsq] = 0
-        Rij = np.sqrt(r2)
-        return ssp.coo_matrix(Rij)
+    def contactMatrix(self):
+        return getFineContactMatrix(self.xs, self.ys, self.thetas, self.m, self.Rm, 1.2)
 
     @lru_cache(maxsize=None)
-    def getXijYij(self):
-        """
-        :return: asymmetric dense matrix of xij = xi - xj, yij = yi - yj
-        """
-        dx = self.xs.reshape(1, -1) - self.xs.reshape(-1, 1)
-        dy = self.ys.reshape(1, -1) - self.ys.reshape(-1, 1)
-        r_dense = self.Rij.todense()
-        dx[r_dense == 0] = 0
-        dy[r_dense == 0] = 0
-        return dx, dy
+    def sphereContactMatrix(self):
+        return getBriefContactMatrix(self.xs, self.ys, 1.5)
 
     @lru_cache(maxsize=None)
-    def getRi(self):
-        """
-        :return: sparse (n x 1) matrix of ri
-        """
-        ri2 = self.xs ** 2 + self.ys ** 2
-        ri2[ri2 < self.Lsq] = 0
-        Ri = np.sqrt(ri2)
-        return ssp.coo_matrix(Ri)
+    def toSphereHalfWay(self) -> (np.ndarray, np.ndarray):  # shape:(N, m)
+        a = 1 + (self.m - 1) / 2 * self.Rm
+        analog_sphere_num = round(a)
+        n_start = (analog_sphere_num - 1) / 2
+        ass = np.array([(2 * (-n_start + i), 0) for i in range(analog_sphere_num)]).T  # shape:(2, m)
+        Us = np.array([rotMat(self.thetas[i]) for i in range(self.n)])  # shape:(N, 2, 2)
+        Uass = np.einsum('ijk,kl->ijl', Us, ass)  # shape:(N, 2, m)
+        Uass_X, Uass_Y = Uass.transpose(1, 0, 2)  # shape:(N, m)
+        return self.xs + Uass_X.T, self.ys + Uass_Y.T  # shape:(m, N)
 
     @lru_cache(maxsize=None)
-    def getContactNumberPP(self):
+    def toSpheres(self) -> ConfigurationC:
         """
-        :return: particle-particle contact number
+        convert sphere assembly to spheres
         """
-        return self.Rij.nnz / 2  # remember that Rij is symmetric!
+        ux, uy = self.toSphereHalfWay()  # shape:(m, N)
+        return ConfigurationC(ux.reshape(-1), uy.reshape(-1), self.L)
 
-    def eachPP(self):
+    @lru_cache(maxsize=None)
+    def angleField(self):
         """
-        :return: particle-particle iterator
+        generate a field for interpolation
         """
-        for i, j, v in zip(self.Rij.row, self.Rij.col, self.Rij.data):
-            yield v
-
-    def eachPW(self):
-        """
-        :return: particle-wall iterator
-        """
-        for i, v in zip(self.Ri.row, self.Ri.data):
-            yield v
-
-    def eachPP_ij(self):
-        """
-        :return: particle-particle iterator
-        """
-        for i, j, v in zip(self.Rij.row, self.Rij.col, self.Rij.data):
-            if i < j:
-                yield i, j, v
-
-    def eachPW_i(self):
-        """
-        :return: particle-wall iterator
-        """
-        for i, v in zip(self.Ri.row, self.Ri.data):
-            yield i, v
+        X, Y = self.toSphereHalfWay()
+        X, Y = X.T, Y.T  # shape:(N, m)
+        m = X.shape[1]
+        A = np.tile(self.thetas.reshape(-1, 1), (1, m))
+        return X.reshape(-1), Y.reshape(-1), A.reshape((-1))
 
 
 class DiskData(Configuration):
-    def __init__(self, json_data):
-        super(DiskData, self).__init__(
-            np.asarray(json_data['x'], dtype=float),
-            np.asarray(json_data['y'], dtype=float),
-            np.asarray(json_data['a'], dtype=float),
-            json_data['scalar radius']
-        )
+    def __init__(self, json_data, metadata):
+        super(DiskData, self).__init__(json_data, metadata)
         self.idx = json_data['id']
         self.energy_curve = np.asarray(json_data['energy curve'])
         self.energy_ref = json_data['energy']
-        # self.contact_ref = json_data['contact number']
 
 
 class DiskNumerical(DiskData):
-    def __init__(self, json_data):
-        super(DiskNumerical, self).__init__(json_data)
-
-    @lru_cache(maxsize=None)
-    def calAreaDefect(self):
-        def Area(r):
-            theta = acos(r) * 2
-            return theta / 2 - sin(theta) / 2
-
-        area_defect = 0
-        for rij in self.eachPP():
-            area_defect += Area(rij / 2)
-        for ri in self.eachPW():
-            area_defect += Area(self.L - ri)
-        return area_defect
-
-    @lru_cache(maxsize=None)
-    def calContactNumber(self):
-        raise NotImplementedError
+    def __init__(self, json_data, metadata):
+        super(DiskNumerical, self).__init__(json_data, metadata)
 
     @lru_cache(maxsize=None)
     def calVoronoiGraph(self):
@@ -187,52 +170,102 @@ class DiskNumerical(DiskData):
         return hexatic
 
     @lru_cache(maxsize=None)
-    def averageContactNumber(self):
-        return self.calContactNumber() / self.n
+    def calSquarePhase(self, order=4):
+        adjacent = self.sphereContactMatrix().todense()
+        adjacent += adjacent.T
+
+        def find_nearest_n(n: int) -> np.ndarray:
+            js = np.where(adjacent[i])[1]
+            xjs = np.array([self.xs[j] for j in js])
+            yjs = np.array([self.ys[j] for j in js])
+            if len(js) <= n:
+                return None
+            xi, yi = self.xs[i], self.ys[i]
+            distances = np.sqrt((xjs - xi) ** 2 + (yjs - yi) ** 2)
+            nearest_indices = np.argsort(distances)[:4]
+            x_nearest = xjs[nearest_indices]
+            y_nearest = yjs[nearest_indices]
+            return np.vstack((x_nearest, y_nearest)).T
+
+        square = np.zeros((self.n,))
+        for i in range(self.n):
+            rs = find_nearest_n(order)
+            if rs is None:
+                square[i] = 0.01
+            else:
+                square[i] = calPsi6(np.array([self.xs[i], self.ys[i]]), list(rs), 4)
+        return square
 
     @lru_cache(maxsize=None)
     def averageBondOrientationalOrder(self, order=6):
         return np.sum(self.calHexatic(order)) / self.n
 
     @lru_cache(maxsize=None)
-    def packing_fraction(self):
-        S = self.n * pi - self.calAreaDefect()
-        S0 = pi * self.L ** 2
-        return S / S0
+    def averageSquareOrder(self, order=4):
+        return np.sum(self.calSquarePhase(order)) / self.n
 
     @lru_cache(maxsize=None)
     def number_density(self):
         return self.n / (pi * self.L ** 2)
-    
+
     @lru_cache(maxsize=None)
-    def calOrientationOrder(self):
-        # not 'bond orientational order'
-        def order(x, y, a):
-            r = np.sqrt(x * x + y * y)
-            ordr = (x * np.sin(a) - y * np.cos(a)) / r
-            return r, ordr * ordr
-        
-        def average(x, y):
-            bins = np.linspace(0, 1, num=6)
-            indices = np.digitize(x, bins)
-            averaged_y = [y[indices == i].mean() for i in range(1, len(bins))]
-            return np.asarray(averaged_y)
-        
-        r, ordr2 = order(self.xs, self.ys, self.thetas)
-        normalized_r = r / self.L  # now r in [0,1]
-        y_ave = average(normalized_r, ordr2)
-        return y_ave
-    
+    def scalarOrderParameter(self):
+        mat = self.contactMatrix()
+        mat = mat + mat.T + np.eye(mat.shape[0])  # including self
+        ns = np.vstack((np.cos(self.thetas), np.sin(self.thetas)))
+        ords = calScalarOrderParameter(ns, mat)
+        return ords
+
     @lru_cache(maxsize=None)
-    def meanOrientation(self):
-        u = (np.mean(np.cos(self.thetas)),
-             np.mean(np.sin(self.thetas)))
-        u = np.array(u)
-        return atan2(u[1], u[0]) % pi
-    
+    def aveScalarOrder(self):
+        ns = np.vstack((np.cos(self.thetas), np.sin(self.thetas)))
+        return calFullScalarOrderParameter(ns)
+
     @lru_cache(maxsize=None)
-    def nematicOrder(self):
-        ave_theta = self.meanOrientation()
-        phi = self.thetas % pi - ave_theta
-        S = np.mean(3 * np.cos(phi) ** 2 - 1) * 0.5
-        return S
+    def nematicField(self, sz=1000):
+        aa = self.thetas * 2  # scale to [0, 2pi]
+        u, v = np.cos(aa), np.sin(aa)
+        xs = np.linspace(-self.La, self.La, sz)
+        ys = np.linspace(-self.Lb, self.Lb, sz)
+        X, Y = np.meshgrid(xs, ys)
+        U = griddata((self.xs, self.ys), u, (X, Y), method='linear')
+        V = griddata((self.xs, self.ys), v, (X, Y), method='linear')  # U, V are in 2pi space
+        boundaryCondE = pde.BoundaryCondFactory(pde.ellipticField, pde.ellipticMask, self.Gamma)(sz, 0.85)
+        for t in range(10):
+            U, V = pde.update(U, V, boundaryCondE)
+        return U, V
+
+    @lru_cache(maxsize=None)
+    def getAngleDiffMatrix(self) -> coo_matrix:
+        adjacent = self.contactMatrix()
+        angles = np.zeros_like(adjacent.data).astype(float)
+        k = 0
+        A = self.thetas % np.pi
+        for i, j, v in zip(adjacent.row, adjacent.col, adjacent.data):
+            angles[k] = min(abs(A[i] + A[j]) % np.pi, abs(A[i] - A[j]) % np.pi)
+            k += 1
+        return cooLike(adjacent, angles)
+
+    @lru_cache(maxsize=None)
+    def getAngleDiffDist(self):
+        angle_diff = self.getAngleDiffMatrix()
+        angles = angle_diff.data
+        hist, bins = np.histogram(angles, bins=24, range=(0, np.pi / 2))
+        return hist / len(angles)
+
+    @lru_cache(maxsize=None)
+    def getAngleCluster(self) -> list[list]:
+        adjacency_matrix = cooFilter(self.getAngleDiffMatrix(), lambda x: x < np.pi / 12).astype(bool)
+        n_components, labels = connected_components(csgraph=adjacency_matrix, directed=False)  # labels: iterator
+        clusters = [[] for _ in range(n_components)]
+        for node_id, cluster_id in enumerate(labels):
+            clusters[cluster_id].append(node_id)
+        return clusters
+
+    @lru_cache(maxsize=None)
+    def angleClusterSizeDist(self) -> np.ndarray:
+        clusters = self.getAngleCluster()
+        lst = np.array(list(map(len, clusters)))
+        hist, bins = np.histogram(lst, self.n, range=(0, self.n))
+        # return hist * bins[:-1] / self.n
+        return hist / self.n

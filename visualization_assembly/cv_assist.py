@@ -1,4 +1,4 @@
-from math import pi, sin, cos, sqrt
+from math import pi, sin, cos
 
 import cv2 as cv
 import numpy as np
@@ -8,6 +8,7 @@ color_list = ['floralWhite', 'lemonchiffon', 'wheat', 'lightsalmon', 'coral', 'c
               'paleturquoise', 'blue', 'teal', 'seagreen', 'green']
 my_black = (10, 10, 10)
 color_num = len(color_list)
+
 
 def rotMat(theta):
     c, s = np.cos(theta), np.sin(theta)
@@ -90,12 +91,12 @@ class FastImage:
         cv.ellipse(self.mat, (triplet[0], triplet[1]), a_and_b, angle=rad_to_angle_int(triplet[2]),
                    startAngle=0, endAngle=360,
                    color=color, thickness=line_width)
-        
-    def sphere_chain(self, triplet:tuple, centers:np.ndarray, radius, color: tuple, line_width):
+
+    def sphere_chain(self, triplet: tuple, centers: np.ndarray, radius, color: tuple, line_width):
         x, y, angle = triplet
         rotation_matrix = rotMat(angle)
         rotated_centers = rotation_matrix @ centers + np.array([[x], [y]])
-        
+
         for x, y in rotated_centers.T:
             cv.circle(self.mat, (int(x), int(y)), radius=radius + line_width, color=(0, 0, 0), thickness=line_width)
         for x, y in rotated_centers.T:
@@ -109,12 +110,23 @@ class FastImage:
         p1 = p1.astype(int)
         p2 = p2.astype(int)
         cv.line(self.mat, p1, p2, color, line_width)
-        
-    def sphericalCylinder(self, center: np.ndarray, alpha, half_length, color:tuple, line_width):
+
+    def sphericalCylinder(self, center: np.ndarray, alpha, half_length, color: tuple, line_width):
         direction = np.array([cos(alpha), sin(alpha)])
         pos1 = center + half_length * direction
         pos2 = center - half_length * direction
         self.rod(0, pos1, pos2, color, line_width)
+
+    def cross(self, x: int, y: int, a: float, size: float, line_width):
+        U = rotMat(a)
+        frame = np.array([[1, 0, -1, 0], [0, 1, 0, -1]])
+        u_frame = U @ frame + np.array([[x], [y]])
+        px1 = np.round(u_frame[:, 0]).astype(int)
+        px2 = np.round(u_frame[:, 1]).astype(int)
+        py1 = np.round(u_frame[:, 2]).astype(int)
+        py2 = np.round(u_frame[:, 3]).astype(int)
+        cv.line(self.mat, px1, px2, (0, 0, 0), line_width)
+        cv.line(self.mat, py1, py2, (0, 0, 0), line_width)
 
     def toImg(self):
         return self.mat

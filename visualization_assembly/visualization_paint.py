@@ -1,10 +1,14 @@
+from math import sqrt
+
+import cv2 as cv
+import numpy as np
 from cmapy import cmap
-from scipy.sparse import coo_matrix
+from matplotlib import pyplot as plt
 
 from colorbar import draw_colorbar
-from cv_assist import *
+from cv_assist import ProjectiveImage, FastImage, getColor
 from visualization_numerical import DiskNumerical
-
+import matplotlib
 
 class SphereAssembly:
     def __init__(self, centers: list):
@@ -53,22 +57,19 @@ def prepare_data_continuum(data: np.ndarray):
 
 
 class DiskPainter(DiskNumerical):
-    def __init__(self, json_data, metadata, dst_folder: str, sz=500):
-        super(DiskPainter, self).__init__(json_data)
-        self.LaM = metadata['boundary size a']
-        self.LbM = metadata['boundary size b']
-        self.Gamma = self.LaM / self.LbM
-        self.La = self.Gamma * self.L
-        self.Lb = self.L  # the scalar radius
+    def __init__(self, json_data, metadata, dst_folder: str, sz=256):
+        self.sz = sz
         self.dst_folder = dst_folder
-        self.ass_n = metadata['assembly number']
-        self.sph_dist = metadata['sphere distance']
-        self.ass = getSphereChain(self.ass_n, self.sph_dist)
-        self.pshape = np.array(((self.ass_n - 1) / 2 * self.sph_dist + 1, 1))
-        self.particle_c = sqrt((self.ass_n - 1) * self.sph_dist * (1 + (self.ass_n - 1) * self.sph_dist / 4))
-        self.height = sz
-        self.helper = ScaleHelper(self.height / self.LbM, self.LaM, self.LbM)
-        self.relative_helper = ScaleHelper(self.height / self.Lb, self.La, self.Lb)
+        if json_data is not None:
+            super(DiskPainter, self).__init__(json_data, metadata)
+            self.ass_n = self.m
+            self.sph_dist = self.Rm
+            self.ass = getSphereChain(self.ass_n, self.sph_dist)
+            self.pshape = np.array(((self.ass_n - 1) / 2 * self.sph_dist + 1, 1))
+            self.particle_c = sqrt((self.ass_n - 1) * self.sph_dist * (1 + (self.ass_n - 1) * self.sph_dist / 4))
+            self.height = self.sz
+            self.helper = ScaleHelper(self.height / self.LbM, self.LaM, self.LbM)
+            self.relative_helper = ScaleHelper(self.height / self.Lb, self.La, self.Lb)
 
     def drawBoundary(self, img):
         img.ellipse((self.helper.shape[0], self.helper.shape[1], 0),
@@ -131,13 +132,19 @@ class DiskPainter(DiskNumerical):
         Visualize discrete data using non-scaling dots diagram.
         """
         X, Y = self.relative_helper.scalePosition(self.xs, self.ys)
-        A = self.thetas
         img = FastImage(*self.relative_helper.shapeT2)
         self.drawBoundaryRelative(img)
 
-        for i in range(self.n):
-            img.sphericalCylinder(np.array((X[i], Y[i])), A[i], self.helper.scaleVector(self.particle_c),
-                                  getColor(data[i]), self.scaleVector(1))
+        if hasattr(self, 'thetas'):
+            A = self.thetas
+            cc = self.helper.scaleVector(self.particle_c)
+            bb = self.helper.scaleVector(1)
+            for i in range(self.n):
+                img.sphericalCylinder(np.array((X[i], Y[i])), A[i], cc, getColor(data[i]), bb)
+        else:
+            rr = self.helper.scaleVector(1)
+            for i in range(self.n):
+                img.circle((X[i], Y[i]), rr, getColor(data[i]), -1)
         cv.imwrite(self.dst_folder + prefix + str(self.idx) + '.jpg', img.toImg())
 
     def plotContinuumDots__(self, data, color_map_name: str, prefix: str, save=True):
@@ -149,13 +156,19 @@ class DiskPainter(DiskNumerical):
         colors = cv.applyColorMap(data, color_map).reshape(-1, 3)
 
         X, Y = self.relative_helper.scalePosition(self.xs, self.ys)
-        A = self.thetas
         img = FastImage(*self.relative_helper.shapeT2)
         self.drawBoundaryRelative(img)
 
-        for i in range(self.n):
-            img.sphericalCylinder(np.array((X[i], Y[i])), A[i], self.helper.scaleVector(self.particle_c),
-                                  toTuple(colors[i]), self.helper.scaleVector(1))
+        if hasattr(self, 'thetas'):
+            A = self.thetas
+            cc = self.helper.scaleVector(self.particle_c)
+            bb = self.helper.scaleVector(1)
+            for i in range(self.n):
+                img.sphericalCylinder(np.array((X[i], Y[i])), A[i], cc, toTuple(colors[i]), bb)
+        else:
+            rr = self.helper.scaleVector(1)
+            for i in range(self.n):
+                img.circle((X[i], Y[i]), rr, toTuple(colors[i]), -1)
 
         # reserve space for color bar
         img = img.toImg()
@@ -170,3 +183,12 @@ class DiskPainter(DiskNumerical):
         else:
             # for further painting, like drawing networks
             return img
+
+    def imsaveNematicField(self, prefix: str):
+        matplotlib.use('Agg')
+        u, v = self.nematicField(self.sz)
+        a = np.arctan2(v, u) / 2
+        plt.imshow(a % np.pi, cmap='hsv')
+        plt.axis('off')
+        plt.savefig(self.dst_folder + prefix + str(self.idx) + '.jpg', bbox_inches='tight',
+                    transparent=True, pad_inches=0, dpi=256)
