@@ -3,20 +3,20 @@
 #define RECORD_TIME
 
 // Enum marcos. It is not allowed to define them as int in linux.
-enum class ScalarF { Power, Exp };
+enum class ScalarF { Power, ScreenedColumb, Exp };
 
-#define SCALAR_POTENTIAL_TYPE ScalarF::Exp
+#define SCALAR_POTENTIAL_TYPE ScalarF::ScreenedColumb
 #define BSHAPE BoundaryE
-
+// #define SAMPLE_NO_EDGE
 
 // Basic options. Varies from one experiment to another.
 
-#define PARTICLE_NUM 400
-#define ASSEMBLY_NUM 5
+#define PARTICLE_NUM 500
+#define ASSEMBLY_NUM 1
 #define SPHERE_DIST 1.0f
-#define BOUNDARY_A 105
-#define BOUNDARY_B 35
-#define COMPRESSION_RATE 0.1
+#define BOUNDARY_A 30
+#define BOUNDARY_B 30
+#define COMPRESSION_RATE 0.04
 #define NUM_COMPRESSIONS 400
 #define OUTPUT_STRIDE 1
 #define MAX_INIT_ITERATIONS 20000
@@ -32,4 +32,4 @@ enum class ScalarF { Power, Exp };
 #define MAX_STEP_SIZE 1e-1f
 #define MIN_STEP_SIZE 1e-4f
 #define ENERGY_EPS 1e-7f
-#define CEASE_FORCE 1e-4f
+#define CEASE_FORCE 1e-3f

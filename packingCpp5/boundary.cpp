@@ -29,7 +29,7 @@ std::tuple<float, float, float> BoundaryC::h(float x, float y)
 {
     // return format: h, x, y
     float r = sqrt(x * x + y * y);
-    return { this->radius - r, x / r, y / r };
+    return { this->radius - r, -x / r, -y / r };
 }
 
 // Ellipse Boundary

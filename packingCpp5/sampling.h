@@ -127,8 +127,16 @@ void randomInitSE(float* x, float a, float b) {
 // Interfaces
 
 template<int m, int N> void RandomInit(StateC<m, N>* state) {
+#ifdef SAMPLE_NO_EDGE
+	randomInitSC<N>(state->q->data(), state->boundary->radius - particle_radius);
+#else
 	randomInitSC<N>(state->q->data(), state->boundary->radius);
+#endif
 }
 template<int m, int N> void RandomInit(StateE<m, N>* state) {
+#ifdef SAMPLE_NO_EDGE
+	randomInitSE<N>(state->q->data(), state->boundary->a - particle_radius, state->boundary->b - particle_radius);
+#else
 	randomInitSE<N>(state->q->data(), state->boundary->a, state->boundary->b);
+#endif
 }

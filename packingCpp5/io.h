@@ -53,6 +53,7 @@ template<> std::string BoundaryName<BoundaryE>() { return "EllipticBoundary"; }
 
 template<ScalarF sca> std::string PotentialName();
 template<> std::string PotentialName<ScalarF::Power>() { return "Power"; }
+template<> std::string PotentialName<ScalarF::ScreenedColumb>() { return "ScreenedColumb"; }
 template<> std::string PotentialName<ScalarF::Exp>() { return "Exp"; }
 
 template<int N, typename bt>
