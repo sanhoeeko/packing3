@@ -9,6 +9,18 @@ using json = nlohmann::json;
 
 // tool functions
 
+std::string getProcessId() {
+#ifdef _WIN32
+	// Windows
+	DWORD processId = GetCurrentProcessId();
+	return std::to_string(processId);
+#else
+	// Linux
+	pid_t processId = getpid();
+	return std::to_string(processId);
+#endif
+}
+
 std::string randomString(int length) {
 	char* cstr = new char[length + 1];
 	for (int i = 0; i < length; i++) {
@@ -71,7 +83,7 @@ public:
 	Metadata(){
 		srand(time(0));
 		this->datetime = getDateTime();
-		this->name = randomString(4);
+		this->name = randomString(4) + getProcessId();
 		this->step_size = CLASSIC_STEP_SIZE;
 		this->boundary_a = BOUNDARY_A;
 		this->boundary_b = BOUNDARY_B;
@@ -92,8 +104,8 @@ public:
 		js["assembly number"] = ASSEMBLY_NUM;
 		js["sphere distance"] = SPHERE_DIST;
 
-		js["particle aspect ratio"] = (float)(ASSEMBLY_NUM - 1) / 2;
-		js["particle size a"] = (float)(ASSEMBLY_NUM - 1) / 2;
+		js["particle aspect ratio"] = particle_radius;
+		js["particle size a"] = particle_radius;
 		js["particle size b"] = 1;
 
 		js["boundary aspect ratio"] = (float)BOUNDARY_A / BOUNDARY_B;
@@ -128,7 +140,7 @@ void OutputEnergyCurve(json& js, ivector<float, energy_curve_capacity>& energy_c
 	energy_curve.clear();
 }
 
-struct InnerLoopData { int iterations; float energy; float residual_force; };
+struct InnerLoopData { int iterations; float energy; };
 
 template<int energy_curve_capacity, int m, int N, typename BoundaryType>
 void OutputData(

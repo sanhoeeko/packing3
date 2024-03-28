@@ -13,12 +13,15 @@
 */
 
 #ifdef _WIN32
+#include<windows.h>
+	#undef max
 #include<Eigen/Dense>
 #include<Eigen/Sparse>
 #pragma warning(disable : 4996)
 #else
 #include<eigen3/Eigen/Dense>
 #include<eigen3/Eigen/Sparse>
+#include<unistd.h>
 #endif
 
 template<int rows>
@@ -44,3 +47,4 @@ using Matf = Eigen::Matrix<float, rows, cols>;
 #endif
 
 #include<iostream>
+#include<cfloat> 

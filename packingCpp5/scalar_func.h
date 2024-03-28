@@ -95,9 +95,9 @@ template<> class ScalarPotential<ScalarF::ScreenedColumb>{
 	FastScalar<SCALAR_RESOLUTION> dfpw;
 public:
 	ScalarPotential() {
-		fpp = FastScalar<SCALAR_RESOLUTION>([](float r)->float {return r > 0 && r < 2 ? expf(-r / 2.0f) / r - EXP_N1 / 2 : 0; });
-		fpw = FastScalar<SCALAR_RESOLUTION>([](float h)->float {return h > 0 && h < 1 ? expf(-h) / h - EXP_N1 : 0; });
-		dfpp = FastScalar<SCALAR_RESOLUTION>([](float r)->float {return r > 0 && r < 2 ? ((2 + r) * expf(-r / 2.0f)) / (2 * r * r) : 0; });
+		fpp = FastScalar<SCALAR_RESOLUTION>([](float r)->float {return r > 0 && r < 2 ? expf(-r / 1.0f) / r - expf(-2)/2 : 0; });
+		fpw = FastScalar<SCALAR_RESOLUTION>([](float h)->float {return h > 0 && h < 1 ? expf(-h) / h - expf(-1) : 0; });
+		dfpp = FastScalar<SCALAR_RESOLUTION>([](float r)->float {return r > 0 && r < 2 ? ((1 + r) * expf(-r / 1.0f)) / (1 * r * r) : 0; });
 		dfpw = FastScalar<SCALAR_RESOLUTION>([](float h)->float {return h > 0 && h < 1 ? ((1 + h) * expf(-h)) / (h * h) : 0; });
 	}
 	float pp(float r) { return fpp(r); }
@@ -114,9 +114,9 @@ template<> class ScalarPotential<ScalarF::Exp> {
 public:
 	ScalarPotential() {
 		fpp = FastScalar<SCALAR_RESOLUTION>([](float r)->float {return r > 0 && r < 2 ? expf(-r / 2.0f) - EXP_N1 : 0; });
-		fpw = FastScalar<SCALAR_RESOLUTION>([](float h)->float {return h < 1 ? 100 * (expf(-h / 1.0f) - EXP_N1) : 0; });
+		fpw = FastScalar<SCALAR_RESOLUTION>([](float h)->float {return h < 1 ? (expf(-h / 1.0f) - EXP_N1) : 0; });
 		dfpp = FastScalar<SCALAR_RESOLUTION>([](float r)->float {return r > 0 && r < 2 ? expf(-r / 2.0f) / (2.0f * r) : 0; });
-		dfpw = FastScalar<SCALAR_RESOLUTION>([](float h)->float {return h < 1 ? 100 * expf(-h / 1.0f) : 0; });
+		dfpw = FastScalar<SCALAR_RESOLUTION>([](float h)->float {return h < 1 ? expf(-h / 1.0f) : 0; });
 	}
 	float pp(float r) { return fpp(r); }
 	float pw(float h) { return fpw.func_allow_negative(h); }

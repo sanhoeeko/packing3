@@ -9,8 +9,6 @@ struct Simulation{
 	StateInfo<ASSEMBLY_NUM, PARTICLE_NUM, BSHAPE> state_info;
 	ivector<float, descent_curve_capacity> _energy_curve;
 	IvectorSampler<float, descent_curve_capacity, ENERGY_RESOLUTION>* energy_curve;
-	ivector<float, descent_curve_capacity> _residual_force_curve;
-	IvectorSampler<float, descent_curve_capacity, ENERGY_RESOLUTION>* residual_force_curve;
 	Metadata<PARTICLE_NUM, BSHAPE>* meta;
 	float current_step_size;	// for mutable step size
 
@@ -20,8 +18,7 @@ struct Simulation{
 		meta = new Metadata<PARTICLE_NUM, BSHAPE>();
 		meta->output();
 		energy_curve = new IvectorSampler<float, descent_curve_capacity, ENERGY_RESOLUTION>(&_energy_curve);
-		residual_force_curve = new IvectorSampler<float, descent_curve_capacity, ENERGY_RESOLUTION>(&_residual_force_curve);
-		current_step_size = MAX_STEP_SIZE;
+		current_step_size = CLASSIC_STEP_SIZE;
 
 		std::cout << "Simulation ID: " << meta->name << std::endl;
 		InnerLoopData init_data = relaxAfterInit();
@@ -66,10 +63,9 @@ struct Simulation{
 		// full relax at the target scalar radius
 		InnerLoopData data = loop_custom(FINE_ITERATIONS);
 		std::cout << "final:\t iterations: " << data.iterations <<
-			",\t energy: " << data.energy << 
-			",\t residual force: " << data.residual_force << std::endl;
+			",\t energy: " << data.energy << std::endl;
 		OutputData<descent_curve_capacity, ASSEMBLY_NUM, PARTICLE_NUM, BSHAPE>(0, meta, data,
-			*(state_info.state), _energy_curve, _residual_force_curve);
+			*(state_info.state), _energy_curve);
 	}
 	void simulate(int num_compressions) {
 		/*
@@ -88,8 +84,7 @@ struct Simulation{
 			std::cout << "compression: " << t <<
 				",\t boundary radius: " << state_info.state->boundary->scalar_radius <<
 				",\t iterations: " << data.iterations <<
-				",\t energy: " << data.energy <<
-				",\t residual force: " << data.residual_force << std::endl;
+				",\t energy: " << data.energy << std::endl;
 			std::cout << "current step size: " << current_step_size << std::endl;
 			if (t % OUTPUT_STRIDE == 0)output(t + 1, data);
 		}
@@ -106,42 +101,43 @@ struct Simulation{
 	InnerLoopData loop_classic(int turns) {
 		int i = 0;
 		float energy = 0;
-		float gm = 0;
 		current_step_size = CLASSIC_STEP_SIZE;
 		for (; i < turns; i++) {
 			energy = Step(state_info, current_step_size);
 			energy_curve->push_back(energy);
 			if (energy < ENERGY_EPS) {
-				gm = 0;
 				break;
 			}
 		}
-		return { i, energy, gm };
+		return { i, energy };
 	}
 	InnerLoopData loop_custom(int turns) {
-		const float Gc = 0.1;
-		const float k = log((MAX_STEP_SIZE - MIN_STEP_SIZE) / (MID_STEP_SIZE - MIN_STEP_SIZE)) / Gc;
-		const float A = MIN_STEP_SIZE - MIN_STEP_SIZE;
-		static auto step_size_func = [=](float x)->float {return MAX_STEP_SIZE + A * exp(-k * x); };
-		current_step_size = meta->final_energy_curve.empty()? 
-			MAX_STEP_SIZE: 
-			step_size_func(meta->final_energy_curve[meta->final_energy_curve.size() - 1]);
-		current_step_size = MID_STEP_SIZE;
+		current_step_size = FINE_STEP_SIZE;
+		float best_energy = FLT_MAX;
+		int early_stop_counter = 0;
 		int i = 0;
 		float energy = 0;
-		float gmean = 0;
 		for (; i < turns; i++) {
 			energy = Step(state_info, current_step_size);
 			energy_curve->push_back(energy);
 			if (energy < ENERGY_EPS) {
-				gmean = 0;
 				break;
 			}
-			gmean = MeanGradientNorm<PARTICLE_NUM>(state_info.gradient);
-			// current_step_size = step_size_func(gm);
-			residual_force_curve->push_back(gmean);
-			if (gmean < CEASE_FORCE)break;
+			if (i % ENERGY_RESOLUTION == 0) {
+				if (energy / best_energy - 1 > -EARLY_STOP_COEF * FINE_STEP_SIZE) {
+					early_stop_counter++;
+					if (early_stop_counter == EARLY_STOP_PATIENCE) {
+						break;
+					}
+				}
+				else {
+					early_stop_counter = 0;
+				}
+				if (energy < best_energy) {
+					best_energy = energy;
+				}
+			}
 		}
-		return { i, energy, gmean };
+		return { i, energy };
 	}
 };
