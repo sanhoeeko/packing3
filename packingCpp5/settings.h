@@ -11,16 +11,16 @@ enum class ScalarF { Power, ScreenedColumb, Exp };
 
 // Basic options. Varies from one experiment to another.
 
-#define PARTICLE_NUM 500
+#define PARTICLE_NUM 200
 #define ASSEMBLY_NUM 1
 #define SPHERE_DIST 1.0f
-#define BOUNDARY_A 30
-#define BOUNDARY_B 30
-#define COMPRESSION_RATE 0.04
-#define NUM_COMPRESSIONS 400
-#define OUTPUT_STRIDE 1
+#define BOUNDARY_A 25
+#define BOUNDARY_B 25
+#define END_BOUNDARY_B 16
+#define COMPRESSION_RATE 0.05
 #define MAX_INIT_ITERATIONS 20000
 #define MAX_ITERATIONS 20000
+#define FINE_ITERATIONS 1000000
 
 
 // Fixed parameters. Better determined and optimized before any experiment.
@@ -29,7 +29,13 @@ enum class ScalarF { Power, ScreenedColumb, Exp };
 #define SCALAR_RESOLUTION 24	// significant figures = log10( 2 ^ SCALAR_RESOLUTION )
 #define MAX_CONTACT_NUMBER 32	// relates to memory cost
 #define CLASSIC_STEP_SIZE 1e-3f
-#define MAX_STEP_SIZE 1e-1f
-#define MIN_STEP_SIZE 1e-4f
+#define MAX_STEP_SIZE 1e-3f
+#define MID_STEP_SIZE 1e-5f
+#define MIN_STEP_SIZE 1e-6f
 #define ENERGY_EPS 1e-7f
-#define CEASE_FORCE 1e-3f
+#define CEASE_FORCE 5e-2f	// non-zero contact force
+
+// depricated
+
+#define NUM_COMPRESSIONS 400
+#define OUTPUT_STRIDE 1

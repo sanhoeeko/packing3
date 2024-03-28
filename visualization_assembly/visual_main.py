@@ -35,7 +35,6 @@ if __name__ == '__main__':
 
         if ifplot:
             d.plotConfigurationOnly(True)
-            # d.plotNematicField()
             d.plotVoronoiAsSpheres(True)
             # d.plotOrientationAngles(True)
             # d.plotScalarOrder(True)

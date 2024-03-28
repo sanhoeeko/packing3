@@ -102,11 +102,5 @@ class Disk(DiskPainter):
             spheres = Disk.fromConfigurationC(self.toSpheres(), self)
             spheres.plotDiscrete(dots)([3] * self.n, 'c')
 
-    def plotNematicField(self):
-        self.imsaveNematicField('n')
-
-
-'''
-    def plotForceNetwork(self):
-        self.plotNetwork_(self.calEnergy(), self.calForceNetwork(), 'Blues', 'Blues', 'f')
-'''
+    def plotD4Field(self):
+        self.plotCross('d')

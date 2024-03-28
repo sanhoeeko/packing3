@@ -6,6 +6,11 @@ void Boundary::define_scalar_radius(float r)
     this->initial_scalar_radius = this->scalar_radius;
 }
 
+void Boundary::step(float compression_rate)
+{
+    setScalarRadius(this->scalar_radius - compression_rate);
+}
+
 // Circle Boundary
 
 BoundaryC::BoundaryC(float initial_radius, float _)
@@ -19,10 +24,10 @@ Grid* BoundaryC::getGrid()
     return new Grid(2, radius + particle_radius, radius + particle_radius);
 }
 
-void BoundaryC::step(float compression_rate)
+void BoundaryC::setScalarRadius(float scalar_radius)
 {
-    this->scalar_radius -= compression_rate;
-    this->radius = this->scalar_radius;
+    this->scalar_radius = scalar_radius;
+    this->radius = scalar_radius;
 }
 
 std::tuple<float, float, float> BoundaryC::h(float x, float y)
@@ -47,11 +52,11 @@ Grid* BoundaryE::getGrid()
     return new Grid(2, a + particle_radius, b + particle_radius);
 }
 
-void BoundaryE::step(float compression_rate)
+void BoundaryE::setScalarRadius(float scalar_radius)
 {
-    this->scalar_radius -= compression_rate;
-    this->b -= compression_rate;
-    this->a -= aspect_ratio * compression_rate;
+    this->scalar_radius = scalar_radius;
+    this->b = scalar_radius;
+    this->a = aspect_ratio * scalar_radius;
     sol = BESolver(a, b);   // Do not forget to update the solver since there is one!
 }
 

@@ -3,12 +3,11 @@ from math import sqrt
 import cv2 as cv
 import numpy as np
 from cmapy import cmap
-from matplotlib import pyplot as plt
 
 from colorbar import draw_colorbar
 from cv_assist import ProjectiveImage, FastImage, getColor
 from visualization_numerical import DiskNumerical
-import matplotlib
+
 
 class SphereAssembly:
     def __init__(self, centers: list):
@@ -29,7 +28,7 @@ class ScaleHelper:
     def scaleVector_keepFloat(self, x):
         return self.rate * x
 
-    def scalePosition(self, x, y):
+    def scalePosition(self, x, y) -> tuple[np.ndarray[int], np.ndarray[int]]:
         return np.round(self.rate * (x + self.LaM)).astype(int), np.round(self.rate * (y + self.LbM)).astype(int)
 
 
@@ -184,11 +183,14 @@ class DiskPainter(DiskNumerical):
             # for further painting, like drawing networks
             return img
 
-    def imsaveNematicField(self, prefix: str):
-        matplotlib.use('Agg')
-        u, v = self.nematicField(self.sz)
-        a = np.arctan2(v, u) / 2
-        plt.imshow(a % np.pi, cmap='hsv')
-        plt.axis('off')
-        plt.savefig(self.dst_folder + prefix + str(self.idx) + '.jpg', bbox_inches='tight',
-                    transparent=True, pad_inches=0, dpi=256)
+    def plotCross(self, prefix: str):
+        X, Y = self.helper.scalePosition(self.xs, self.ys)
+        A = self.thetas
+
+        img = FastImage(*self.helper.shapeT2)
+        self.drawBoundary(img)
+
+        for i in range(self.n):
+            img.cross(X[i], Y[i], A[i], 5, 2)
+
+        cv.imwrite(self.dst_folder + prefix + str(self.idx) + '.jpg', img.toImg())

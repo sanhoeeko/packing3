@@ -151,3 +151,8 @@ template<int N>
 float GradientMaxAbs(Vecf<3 * N>* g) {
 	return GradientNorm<N>(g).maxCoeff();
 }
+
+template<int N>
+float MeanGradientNorm(Vecf<3 * N>* g) {
+	return sqrtf((g->cwiseProduct(*g)).sum() / N);
+}

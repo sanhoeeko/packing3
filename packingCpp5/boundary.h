@@ -11,9 +11,10 @@ public:
 	float scalar_radius;
 
 	virtual Grid* getGrid() = 0;
-	virtual void step(float compression_rate) = 0;
+	virtual void setScalarRadius(float scalar_radius) = 0;
 	virtual std::tuple<float, float, float> h(float x, float y) = 0;
 	void define_scalar_radius(float r);
+	void step(float compression_rate);
 };
 
 class BoundaryC : public Boundary {
@@ -22,7 +23,7 @@ public:
 
 	BoundaryC(float initial_radius, float _);
 	Grid* getGrid();
-	void step(float compression_rate);
+	void setScalarRadius(float scalar_radius);
 	std::tuple<float, float, float> h(float x, float y);
 };
 
@@ -34,6 +35,6 @@ public:
 
 	BoundaryE(float a, float b);
 	Grid* getGrid();
-	void step(float compression_rate);
+	void setScalarRadius(float scalar_radius);
 	std::tuple<float, float, float> h(float x, float y);
 };

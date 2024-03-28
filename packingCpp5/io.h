@@ -121,21 +121,20 @@ void OutputConfiguration(json& js, Vecf<3 * N>& q) {
 }
 
 template<int energy_curve_capacity>
-void OutputEnergyCurve(json& js, ivector<float, energy_curve_capacity>& energy_curve) {
+void OutputEnergyCurve(json& js, ivector<float, energy_curve_capacity>& energy_curve, const char* key_name="energy curve") {
 	std::vector<float> temp(energy_curve.begin(), energy_curve.end());
 	json j_vec(temp);
-	js["energy curve"] = j_vec;
+	js[key_name] = j_vec;
 	energy_curve.clear();
 }
 
-struct InnerLoopData { int iterations; float energy; };
+struct InnerLoopData { int iterations; float energy; float residual_force; };
 
 template<int energy_curve_capacity, int m, int N, typename BoundaryType>
 void OutputData(
-	int step, Metadata<N, BoundaryType>* meta,
+	int step, Metadata<N, BoundaryType>* meta, InnerLoopData& loop_data,
 	State<m, N, BoundaryType>& cf, 
-	ivector<float, energy_curve_capacity>& energy_curve,
-	InnerLoopData& loop_data) 
+	ivector<float, energy_curve_capacity>& energy_curve) 
 {
 	json js;
 	js["id"] = step;
@@ -150,17 +149,24 @@ void OutputData(
 	file << js << std::endl;
 	file.close();
 }
+template<int energy_curve_capacity, int m, int N, typename BoundaryType>
+void OutputData(
+	int step, Metadata<N, BoundaryType>* meta, InnerLoopData& loop_data,
+	State<m, N, BoundaryType>& cf,
+	ivector<float, energy_curve_capacity>& energy_curve,
+	ivector<float, energy_curve_capacity>& residual_force_curve)
+{
+	json js;
+	js["id"] = step;
+	js["scalar radius"] = cf.boundary->scalar_radius;
+	js["energy"] = loop_data.energy;
+	js["iterations"] = loop_data.iterations;
 
-// deprecated
+	OutputConfiguration<N>(js, *(cf.q));
+	OutputEnergyCurve(js, energy_curve);
+	OutputEnergyCurve(js, residual_force_curve, "residual force curve");
 
-void OutputDenseDynamic(Eigen::MatrixXf& mat) {
-	std::ofstream outfile("matrix.txt");
-	outfile << mat.format(Eigen::IOFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, ", ", "\n", "", "", "", ""));
-	outfile.close();
-}
-
-void OutputVectorDynamic(Eigen::VectorXf& vec) {
-	std::ofstream outfile("matrix.txt");
-	outfile << vec.format(Eigen::IOFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, ", ", "\n", "", "", "", ""));
-	outfile.close();
+	std::ofstream file(meta->name + ".json", std::ios::app);
+	file << js << std::endl;
+	file.close();
 }
