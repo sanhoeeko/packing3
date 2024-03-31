@@ -119,11 +119,11 @@ class FastImage:
 
     def cross(self, x: int, y: int, a: float, size: float, line_width):
         U = rotMat(a)
-        frame = np.array([[1, 0, -1, 0], [0, 1, 0, -1]])
+        frame = np.array([[1, 0, -1, 0], [0, 1, 0, -1]]) * size
         u_frame = U @ frame + np.array([[x], [y]])
         px1 = np.round(u_frame[:, 0]).astype(int)
-        px2 = np.round(u_frame[:, 1]).astype(int)
-        py1 = np.round(u_frame[:, 2]).astype(int)
+        py1 = np.round(u_frame[:, 1]).astype(int)
+        px2 = np.round(u_frame[:, 2]).astype(int)
         py2 = np.round(u_frame[:, 3]).astype(int)
         cv.line(self.mat, px1, px2, (0, 0, 0), line_width)
         cv.line(self.mat, py1, py2, (0, 0, 0), line_width)

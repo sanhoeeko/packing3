@@ -36,13 +36,13 @@ def cooFilter(coo: coo_matrix, func):
 def smooth_histogram(values, weights, bins, x_range, sigma=1):
     def gaussian(x, mu, sigma, scale):
         return scale * norm.pdf(x, mu, sigma)
-    
+
     x = np.linspace(x_range[0], x_range[1], bins)
     result = np.zeros_like(x)
-    
+
     for value, weight in zip(values, weights):
         result += gaussian(x, value, sigma, weight)
-    
+
     return result, x
 
 
@@ -206,7 +206,11 @@ class DiskNumerical(DiskData):
 
     @lru_cache(maxsize=None)
     def number_density(self):
-        return self.n / (pi * self.L ** 2)
+        return self.n / (pi * self.La * self.Lb)
+
+    @lru_cache(maxsize=None)
+    def ideal_packing_density(self):
+        return self.number_density() * (pi + 2 * self.Rm * (self.m - 1))
 
     @lru_cache(maxsize=None)
     def scalarOrderParameter(self):

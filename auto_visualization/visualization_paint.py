@@ -182,6 +182,31 @@ class DiskPainter(DiskNumerical):
         else:
             # for further painting, like drawing networks
             return img
+        
+    def plotContinuumDotsNoColorBar__(self, data, color_map_name: str, prefix: str, save=True):
+        """
+        Visualize continuum data using non-scaling dots diagram.
+        """
+        min_value, max_value, data = prepare_data_continuum(data)
+        color_map = cmap(color_map_name)
+        colors = cv.applyColorMap(data, color_map).reshape(-1, 3)
+
+        X, Y = self.relative_helper.scalePosition(self.xs, self.ys)
+        img = FastImage(*self.relative_helper.shapeT2)
+        self.drawBoundaryRelative(img)
+
+        if hasattr(self, 'thetas'):
+            A = self.thetas
+            cc = self.helper.scaleVector(self.particle_c)
+            bb = self.helper.scaleVector(1)
+            for i in range(self.n):
+                img.sphericalCylinder(np.array((X[i], Y[i])), A[i], cc, toTuple(colors[i]), bb)
+        else:
+            rr = self.helper.scaleVector(1)
+            for i in range(self.n):
+                img.circle((X[i], Y[i]), rr, toTuple(colors[i]), -1)
+                
+        cv.imwrite(self.dst_folder + prefix + str(self.idx) + '.jpg', img.toImg())
 
     def plotCross(self, prefix: str):
         X, Y = self.helper.scalePosition(self.xs, self.ys)
@@ -191,6 +216,6 @@ class DiskPainter(DiskNumerical):
         self.drawBoundary(img)
 
         for i in range(self.n):
-            img.cross(X[i], Y[i], A[i], 5, 2)
+            img.cross(X[i], Y[i], A[i], 5, 1)
 
         cv.imwrite(self.dst_folder + prefix + str(self.idx) + '.jpg', img.toImg())

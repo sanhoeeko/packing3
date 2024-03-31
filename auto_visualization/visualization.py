@@ -93,7 +93,7 @@ class Disk(DiskPainter):
         spheres.plotDiscrete(dots)(spheres.calVoronoiNeighbors(), 'vs')
 
     def plotOrientationAngles(self, dots):
-        self.plotContinuum(dots)(self.thetas % np.pi, 'hsv', 'a')
+        self.plotContinuumDotsNoColorBar__(self.thetas % np.pi, 'hsv', 'a')
 
     def plotConfigurationOnly(self, dots):
         if self.ass_n > 1:

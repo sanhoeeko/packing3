@@ -13,7 +13,8 @@ struct Simulation{
 	float current_step_size;	// for mutable step size
 
 	Simulation(bool output_init_data) {
-		state_info = CreateRandomState<ASSEMBLY_NUM, PARTICLE_NUM, BSHAPE>(BOUNDARY_A, BOUNDARY_B);
+		// state_info = CreateRandomState<ASSEMBLY_NUM, PARTICLE_NUM, BSHAPE>(BOUNDARY_A, BOUNDARY_B);
+		state_info = CreateRandomStateByCircumscribe<ASSEMBLY_NUM, PARTICLE_NUM, BSHAPE>(BOUNDARY_A, BOUNDARY_B);
 
 		meta = new Metadata<PARTICLE_NUM, BSHAPE>();
 		meta->output();
@@ -21,16 +22,17 @@ struct Simulation{
 		current_step_size = CLASSIC_STEP_SIZE;
 
 		std::cout << "Simulation ID: " << meta->name << std::endl;
+		/*
 		InnerLoopData init_data = relaxAfterInit();
 		while (cancelPenetrate<PARTICLE_NUM>(*(state_info.state->q), particle_radius, 1.0f)) {
 			init_data = relaxAfterInit();
 		}
 		if (output_init_data) {
 			output(0, init_data);
-		}
+		}*/
 	}
 	InnerLoopData relaxAfterInit() {
-		InnerLoopData data = loop_classic(MAX_INIT_ITERATIONS);
+		InnerLoopData data = loop_classic(CLASSIC_STEP_SIZE, MAX_INIT_ITERATIONS);
 		std::cout << "Initialization finished. iterations: " << data.iterations
 			<< ",\t energy: " << data.energy << std::endl;
 		return data;
@@ -41,6 +43,10 @@ struct Simulation{
 			and then relax for a long time to decrease residual force in order to find an equilibrium state.
 		*/
 		float init_radius = state_info.state->boundary->scalar_radius;
+		if (init_radius < scalar_radius) {
+			std::cout << "Initial radius too small / Final density too low." << std::endl;
+			throw "Invalid raidus";
+		}
 		int steps = (init_radius - scalar_radius) / this->meta->boundary_compression_rate;
 		// relax to the target scalar radius. no output.
 		for (int t = 1; t < steps; t++) {
@@ -48,7 +54,7 @@ struct Simulation{
 			state_info.state->boundary->setScalarRadius(init_radius - t * this->meta->boundary_compression_rate);
 			double tc;
 			RecordTime(tc,
-				InnerLoopData data = loop_classic(MAX_ITERATIONS);
+				InnerLoopData data = loop_classic(CLASSIC_STEP_SIZE, MAX_ITERATIONS);
 			)
 #ifdef RECORD_TIME
 				double speed = data.iterations / tc;
@@ -61,21 +67,28 @@ struct Simulation{
 			clearButNoOutput();
 		}
 		// full relax at the target scalar radius
-		InnerLoopData data = loop_custom(FINE_ITERATIONS);
+		InnerLoopData data = loop_custom(FINE_STEP_SIZE, FINE_ITERATIONS);
 		std::cout << "final:\t iterations: " << data.iterations <<
 			",\t energy: " << data.energy << std::endl;
 		OutputData<descent_curve_capacity, ASSEMBLY_NUM, PARTICLE_NUM, BSHAPE>(0, meta, data,
 			*(state_info.state), _energy_curve);
 	}
-	void simulate(int num_compressions) {
+	void simulate(float scalar_radius) {
 		/*
 			A full procedure simulation
 		*/
-		for (int t = 0; t < num_compressions; t++) {
-			state_info.state->boundary->step(this->meta->boundary_compression_rate);
+		float init_radius = state_info.state->boundary->scalar_radius;
+		if (init_radius < scalar_radius) {
+			std::cout << "Initial radius too small / Final density too low." << std::endl;
+			throw "Invalid raidus";
+		}
+		int steps = (init_radius - scalar_radius) / this->meta->boundary_compression_rate;
+		for (int t = 0; t < steps; t++) {
+			// "set" the boundary radius, rather than substract.
+			state_info.state->boundary->setScalarRadius(init_radius - t * this->meta->boundary_compression_rate);
 			double tc;
 			RecordTime(tc,
-				InnerLoopData data = loop_classic(MAX_ITERATIONS);
+				InnerLoopData data = loop_custom(CLASSIC_STEP_SIZE, MAX_ITERATIONS);
 			)
 #ifdef RECORD_TIME
 			double speed = data.iterations / tc;
@@ -98,10 +111,10 @@ struct Simulation{
 	void clearButNoOutput() {
 		_energy_curve.clear();
 	}
-	InnerLoopData loop_classic(int turns) {
+	InnerLoopData loop_classic(float step_size, int turns) {
 		int i = 0;
 		float energy = 0;
-		current_step_size = CLASSIC_STEP_SIZE;
+		current_step_size = step_size;
 		for (; i < turns; i++) {
 			energy = Step(state_info, current_step_size);
 			energy_curve->push_back(energy);
@@ -111,8 +124,8 @@ struct Simulation{
 		}
 		return { i, energy };
 	}
-	InnerLoopData loop_custom(int turns) {
-		current_step_size = FINE_STEP_SIZE;
+	InnerLoopData loop_custom(float step_size, int turns) {
+		current_step_size = step_size;
 		float best_energy = FLT_MAX;
 		int early_stop_counter = 0;
 		int i = 0;
@@ -124,7 +137,7 @@ struct Simulation{
 				break;
 			}
 			if (i % ENERGY_RESOLUTION == 0) {
-				if (energy / best_energy - 1 > -EARLY_STOP_COEF * FINE_STEP_SIZE) {
+				if (energy / best_energy - 1 > -EARLY_STOP_COEF * step_size) {
 					early_stop_counter++;
 					if (early_stop_counter == EARLY_STOP_PATIENCE) {
 						break;

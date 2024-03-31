@@ -6,20 +6,21 @@
 enum class ScalarF { Power, ScreenedColumb, Exp };
 
 #define SCALAR_POTENTIAL_TYPE ScalarF::ScreenedColumb
-#define BSHAPE BoundaryE
+#define BSHAPE BoundaryC
 // #define SAMPLE_NO_EDGE
 
 // Basic options. Varies from one experiment to another.
 
-#define PARTICLE_NUM 200
-#define ASSEMBLY_NUM 1
+#define PARTICLE_NUM 400
+#define ASSEMBLY_NUM 3
 #define SPHERE_DIST 1.0f
-#define BOUNDARY_A 25
-#define BOUNDARY_B 25
-#define END_BOUNDARY_B 16
-#define COMPRESSION_RATE 0.05
+#define BOUNDARY_A 50
+#define BOUNDARY_B 50
+#define END_BOUNDARY_B 36
+#define COMPRESSION_RATE 0.1
 #define MAX_INIT_ITERATIONS 20000
-#define MAX_ITERATIONS 20000
+#define MAX_ITERATIONS 100000
+#define MAX_INIT_ITERATIONS_FOR_CIRC 100000
 #define FINE_ITERATIONS 1000000
 
 

@@ -115,16 +115,6 @@ void Descent(StateInfo<m, N, bt>& state_info, float step_size) {
 	(*state_info.state->q) -= step_size * (*state_info.gradient);
 }
 
-// initialization of a state object
-template<int m, int N, typename bt>
-StateInfo<m, N, bt> CreateRandomState(float initial_boundary_a, float initial_boundary_b) {
-	bt* b = new bt(initial_boundary_a, initial_boundary_b);
-	SphereChain<m>* sphere_chain = new SphereChain<m>(SPHERE_DIST);
-	State<m, N, bt>* state = new State<m, N, bt>(b, sphere_chain);
-	RandomInit<m, N>(state);
-	return StateInfo<m, N, bt>(state);
-}
-
 // Step interface. It seems to have two slot functions. However, they can be deduced from known template parameters!
 // So it has no slot functions, too.
 
@@ -155,4 +145,55 @@ float GradientMaxAbs(Vecf<3 * N>* g) {
 template<int N>
 float MeanGradientNorm(Vecf<3 * N>* g) {
 	return sqrtf((g->cwiseProduct(*g)).sum() / N);
+}
+
+// initialization of a state object
+template<int m, int N, typename bt>
+StateInfo<m, N, bt> CreateRandomState(float initial_boundary_a, float initial_boundary_b) {
+	bt* b = new bt(initial_boundary_a, initial_boundary_b);
+	SphereChain<m>* sphere_chain = new SphereChain<m>(SPHERE_DIST);
+	State<m, N, bt>* state = new State<m, N, bt>(b, sphere_chain);
+	RandomInit<m, N>(state);
+	return StateInfo<m, N, bt>(state);
+}
+
+// New initialization and its interface
+
+template<int N, typename bt>
+void initByCircumscribe(float* x, float a, float b) {
+	// get packing of spheres in image space
+	float gamma = particle_radius;	// import from boundary.h
+	StateInfo<1, N, bt> image_space_info = CreateRandomState<1, N, bt>(a / gamma, b / gamma); // m=1 --> spheres
+	bool successful_init = false;
+	for (int i = 0; i < MAX_INIT_ITERATIONS_FOR_CIRC; i++) {
+		float energy = Step(image_space_info, CLASSIC_STEP_SIZE);
+		if (energy < ENERGY_EPS) {
+			successful_init = true; break;
+		}
+	}
+	if (successful_init) {
+		std::cout << "Initialized by circumscribe spheres." << std::endl;
+	}
+	else{
+		std::cout << "Initial density is too high." << std::endl;
+		throw "Init too dense";
+	}
+	// transform to preimage space
+	Vecf<3 * N> sites = (*image_space_info.state->q) * gamma;
+	// initialize angles
+	float* ptr = sites.data() + 2 * N;
+	for (int i = 0; i < N; i++) {
+		ptr[i] = randf() * PI;
+	}
+	// copy data
+	memcpy(x, sites.data(), 3 * N * sizeof(float));
+}
+
+template<int m, int N, typename bt>
+StateInfo<m, N, bt> CreateRandomStateByCircumscribe(float initial_boundary_a, float initial_boundary_b) {
+	bt* b = new bt(initial_boundary_a, initial_boundary_b);
+	SphereChain<m>* sphere_chain = new SphereChain<m>(SPHERE_DIST);
+	State<m, N, bt>* state = new State<m, N, bt>(b, sphere_chain);
+	initByCircumscribe<N, bt>(state->q->data(), initial_boundary_a, initial_boundary_b);
+	return StateInfo<m, N, bt>(state);
 }
