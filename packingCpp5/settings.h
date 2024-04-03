@@ -6,19 +6,19 @@
 enum class ScalarF { Power, ScreenedColumb, Exp };
 
 #define SCALAR_POTENTIAL_TYPE ScalarF::ScreenedColumb
-#define BSHAPE BoundaryC
+#define BSHAPE BoundaryE
 // #define SAMPLE_NO_EDGE
 
 // Basic options. Varies from one experiment to another.
 
-#define PARTICLE_NUM 400
-#define ASSEMBLY_NUM 3
-#define SPHERE_DIST 1.0f
-#define BOUNDARY_A 50
-#define BOUNDARY_B 50
-#define END_BOUNDARY_B 36
+#define PARTICLE_NUM 100
+#define ASSEMBLY_NUM 5
+#define SPHERE_DIST 0.25f
+#define BOUNDARY_A 48
+#define BOUNDARY_B 32
+#define END_BOUNDARY_B 5
 #define COMPRESSION_RATE 0.1
-#define MAX_INIT_ITERATIONS 20000
+#define MAX_INIT_ITERATIONS 100000
 #define MAX_ITERATIONS 100000
 #define MAX_INIT_ITERATIONS_FOR_CIRC 100000
 #define FINE_ITERATIONS 1000000
@@ -28,11 +28,11 @@ enum class ScalarF { Power, ScreenedColumb, Exp };
 
 #define ENERGY_RESOLUTION 1000
 #define SCALAR_RESOLUTION 24	// significant figures = log10( 2 ^ SCALAR_RESOLUTION )
-#define MAX_CONTACT_NUMBER 32	// relates to memory cost
+#define MAX_CONTACT_NUMBER 128	// relates to memory cost
 #define CLASSIC_STEP_SIZE 1e-3f
 #define FINE_STEP_SIZE 1e-4f
 #define ENERGY_EPS 1e-7f
-#define EARLY_STOP_COEF 0.01f
+#define EARLY_STOP_COEF 0.1f
 #define EARLY_STOP_PATIENCE 10
 
 // depricated

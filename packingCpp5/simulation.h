@@ -82,10 +82,12 @@ struct Simulation{
 			std::cout << "Initial radius too small / Final density too low." << std::endl;
 			throw "Invalid raidus";
 		}
-		int steps = (init_radius - scalar_radius) / this->meta->boundary_compression_rate;
-		for (int t = 0; t < steps; t++) {
+		int t = 0;
+		while (state_info.state->boundary->scalar_radius > END_BOUNDARY_B) {
+			t++;
 			// "set" the boundary radius, rather than substract.
-			state_info.state->boundary->setScalarRadius(init_radius - t * this->meta->boundary_compression_rate);
+			// state_info.state->boundary->setScalarRadius(init_radius - t * this->meta->boundary_compression_rate);
+			state_info.state->boundary->setScalarRadius(init_radius - 0.8 * (sqrtf(t + 2.236) - 1.495));
 			double tc;
 			RecordTime(tc,
 				InnerLoopData data = loop_custom(CLASSIC_STEP_SIZE, MAX_ITERATIONS);
