@@ -5,7 +5,7 @@ import pandas as pd
 from project_replica import newExperiment
 
 
-def get_init_boundary_axis(n, N, R, Gamma, phi0):
+def get_axis_from_fraction(n, N, R, Gamma, phi0):
     """
     :param n: assembly number
     :param N: particle number
@@ -19,24 +19,34 @@ def get_init_boundary_axis(n, N, R, Gamma, phi0):
     return A, B
 
 
+def get_axis_from_sphere_fraction(n, N, R, Gamma, rho0):
+    """
+    rho0 is the packing fraction of circumscribe spheres. suggest: rho0 < 0.4
+    """
+    gamma = 1 + (n - 1) * R / 2
+    B = gamma * math.sqrt(N / (Gamma * rho0))
+    A = Gamma * B
+    return A, B
+
+
 def get_boundary_type(gamma):
     return "BoundaryC" if gamma == 1 else "BoundaryE"
 
 
-def ExperimentFixedSettings(N: int, R: float, phi_0: float):
+def ExperimentFixedSettings(N: int, R: float, rho0: float, phi_f: float):
     """
     :return: Callable which accepts a tuple: (n, Gamma, phi_f)
     """
 
-    def _invokeNewExperiment(n: int, Gamma: float, phi_f: float):
-        a, b = get_init_boundary_axis(n, N, R, Gamma, phi_f)
-        A, B = get_init_boundary_axis(n, N, R, Gamma, phi_0)
+    def _invokeNewExperiment(n: int, Gamma: float):
+        a, b = get_axis_from_fraction(n, N, R, Gamma, phi_f)
+        A, B = get_axis_from_sphere_fraction(n, N, R, Gamma, rho0)
+        print(f"initial: A={A}, B={B}; final: a={a}, b={b}")
         return newExperiment(PARTICLE_NUM=N, ASSEMBLY_NUM=n, SPHERE_DIST=R, END_BOUNDARY_B=b,
-                             BOUNDARY_A=A, BOUNDARY_B=B, BSHAPE=get_boundary_type(Gamma),
-                             COMPRESSION_RATE=0.05, MAX_ITERATIONS=20000, FINE_ITERATIONS=1000000)
+                             BOUNDARY_A=A, BOUNDARY_B=B, BSHAPE=get_boundary_type(Gamma))
 
     def invokeNewExperiment(tup: tuple):
-        assert len(tup) == 3
+        assert len(tup) == 2
         return _invokeNewExperiment(*tup)
 
     return invokeNewExperiment

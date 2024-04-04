@@ -208,14 +208,17 @@ class DiskPainter(DiskNumerical):
                 
         cv.imwrite(self.dst_folder + prefix + str(self.idx) + '.jpg', img.toImg())
 
-    def plotCross(self, prefix: str):
-        X, Y = self.helper.scalePosition(self.xs, self.ys)
+    def plotCross(self, data, prefix: str):
+        X, Y = self.relative_helper.scalePosition(self.xs, self.ys)
         A = self.thetas
+        color_map = cmap('hsv')
+        min_value, max_value, data = prepare_data_continuum(data)
+        colors = cv.applyColorMap(data, color_map).reshape(-1, 3)
 
-        img = FastImage(*self.helper.shapeT2)
-        self.drawBoundary(img)
+        img = FastImage(*self.relative_helper.shapeT2)
+        self.drawBoundaryRelative(img)
 
         for i in range(self.n):
-            img.cross(X[i], Y[i], A[i], 5, 1)
+            img.cross(X[i], Y[i], A[i], toTuple(colors[i]), 10, 2)
 
         cv.imwrite(self.dst_folder + prefix + str(self.idx) + '.jpg', img.toImg())

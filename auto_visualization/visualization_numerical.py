@@ -8,9 +8,7 @@ from scipy.sparse.csgraph import connected_components
 from scipy.spatial import Delaunay
 from scipy.stats import norm
 
-import liquid_crystal_pde as pde
-from graph import Graph
-from network_builder import getFineContactMatrix, getBriefContactMatrix
+from graph import Graph, getFineContactMatrix, getBriefContactMatrix
 from scalar_order_parameter import calScalarOrderParameter, calFullScalarOrderParameter
 
 # constants
@@ -87,6 +85,9 @@ class Configuration(ConfigurationC):
 
     @lru_cache(maxsize=None)
     def contactMatrix(self):
+        """
+        Warning: may cause problems for very high density states
+        """
         return getFineContactMatrix(self.xs, self.ys, self.thetas, self.m, self.Rm, 1.2)
 
     @lru_cache(maxsize=None)
@@ -151,12 +152,15 @@ class DiskNumerical(DiskData):
         return self.calVoronoiGraph().get_z_numbers()
 
     @lru_cache(maxsize=None)
-    def calVoronoiNeighborsDistribution(self):
-        return self.calVoronoiGraph().get_z_distribution()
+    def getVoronoiContactMatrix(self):
+        """
+        Note: The result is a symmetric coo_matrix, not upper triangular.
+        """
+        return self.calVoronoiGraph().toCoo()
 
     @lru_cache(maxsize=None)
-    def calContactMatrix(self):
-        raise NotImplementedError
+    def calVoronoiNeighborsDistribution(self):
+        return self.calVoronoiGraph().get_z_distribution()
 
     @lru_cache(maxsize=None)
     def calHexatic(self, order=6):
@@ -213,42 +217,37 @@ class DiskNumerical(DiskData):
         return self.number_density() * (pi + 2 * self.Rm * (self.m - 1))
 
     @lru_cache(maxsize=None)
-    def scalarOrderParameter(self):
-        mat = self.contactMatrix()
-        mat = mat + mat.T + np.eye(mat.shape[0])  # including self
-        ns = np.vstack((np.cos(self.thetas), np.sin(self.thetas)))
-        ords = calScalarOrderParameter(ns, mat)
-        return ords
-
-    @lru_cache(maxsize=None)
-    def aveScalarOrder(self):
-        ns = np.vstack((np.cos(self.thetas), np.sin(self.thetas)))
-        return calFullScalarOrderParameter(ns)
-
-    @lru_cache(maxsize=None)
-    def nematicField(self, sz=1000):
-        aa = self.thetas * 2  # scale to [0, 2pi]
+    def angleInterpolation(self, fold: int, sz: int):
+        thetas = self.thetas % (2 * np.pi / fold)
+        aa = thetas * fold  # scale to [0, 2pi]
         u, v = np.cos(aa), np.sin(aa)
-        xs = np.linspace(-self.La, self.La, sz)
+        xs = np.linspace(-self.La, self.La, int(sz * self.Gamma))
         ys = np.linspace(-self.Lb, self.Lb, sz)
         X, Y = np.meshgrid(xs, ys)
         U = griddata((self.xs, self.ys), u, (X, Y), method='linear')
         V = griddata((self.xs, self.ys), v, (X, Y), method='linear')  # U, V are in 2pi space
-        boundaryCondE = pde.BoundaryCondFactory(pde.ellipticField, pde.ellipticMask, self.Gamma)(sz, 0.85)
-        for t in range(10):
-            U, V = pde.update(U, V, boundaryCondE)
-        return U, V
+        Phi = np.arctan2(V, U)
+        return Phi / fold
+
+    @lru_cache(maxsize=None)
+    def nematicInterpolation(self, sz=1000):
+        return self.angleInterpolation(2, sz)
+
+    @lru_cache(maxsize=None)
+    def D4Interpolation(self, sz=1000):
+        return self.angleInterpolation(4, sz)
 
     @lru_cache(maxsize=None)
     def getAngleDiffMatrix(self) -> coo_matrix:
-        adjacent = self.contactMatrix()
-        angles = np.zeros_like(adjacent.data).astype(float)
+        # adjacency = self.contactMatrix()
+        adjacency = self.getVoronoiContactMatrix()
+        angles = np.zeros_like(adjacency.data).astype(float)
         k = 0
         A = self.thetas % np.pi
-        for i, j, v in zip(adjacent.row, adjacent.col, adjacent.data):
+        for i, j, v in zip(adjacency.row, adjacency.col, adjacency.data):
             angles[k] = min(abs(A[i] + A[j]) % np.pi, abs(A[i] - A[j]) % np.pi)
             k += 1
-        return cooLike(adjacent, angles)
+        return cooLike(adjacency, angles)
 
     @lru_cache(maxsize=None)
     def getAngleDiffDist(self):
@@ -269,7 +268,35 @@ class DiskNumerical(DiskData):
     @lru_cache(maxsize=None)
     def angleClusterSizeDist(self) -> np.ndarray:
         clusters = self.getAngleCluster()
-        lst = np.array(list(map(len, clusters)))
-        hist, bins = np.histogram(lst, self.n, range=(0, self.n))
-        # return hist * bins[:-1] / self.n
-        return hist / self.n
+        lst = np.array(list(map(len, clusters)))  # sizes of each cluster
+        res = np.zeros((self.n,))
+        for i in lst:
+            res[i + 1] += 1
+        return res
+
+    @lru_cache(maxsize=None)
+    def expectedClusterSize(self):
+        """
+        Meaning: randomly pick up a particle, the expectation of the size of the cluster it is in.
+        """
+        size_dist = self.angleClusterSizeDist()
+        weight = np.array(range(1, self.n + 1)) ** 2
+        return np.dot(size_dist, weight) / self.n
+
+    @lru_cache(maxsize=None)
+    def scalarOrderParameter(self):
+        # mat = self.contactMatrix()
+        # mat = mat + mat.T + np.eye(mat.shape[0])  # including self
+        mat = self.getVoronoiContactMatrix().toarray() + np.eye(self.n)
+        ns = np.vstack((np.cos(self.thetas), np.sin(self.thetas)))
+        ords = calScalarOrderParameter(ns, mat.astype(bool))
+        return ords
+
+    @lru_cache(maxsize=None)
+    def aveScalarOrder(self):
+        return np.mean(self.scalarOrderParameter())
+
+    @lru_cache(maxsize=None)
+    def overallScalarOrder(self):
+        ns = np.vstack((np.cos(self.thetas), np.sin(self.thetas)))
+        return calFullScalarOrderParameter(ns)

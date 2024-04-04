@@ -1,40 +1,12 @@
 # This is an interface module
 
-import matplotlib.pyplot as plt
 import numpy as np
 
+from cv_assist import save_interpolation_image
 from visualization_numerical import ConfigurationC
 from visualization_paint import DiskPainter, ScaleHelper
 
 figure_size = 1000
-
-
-def getColorForInterval(color_map_name: str, interval: tuple):
-    cmap = plt.cm.get_cmap(color_map_name)
-    a = interval[0]
-    b = interval[1]
-    k = 1 / (b - a)
-
-    def callCmap(x: float):
-        y = k * (x - a)
-        return cmap(y)
-
-    return callCmap
-
-
-def plotListOfArray(lst: list[np.ndarray]):
-    cmap = getColorForInterval('cool', (0, len(lst[0])))
-    for i in range(len(lst)):
-        plt.plot(lst[i], color=cmap(i), alpha=0.5)
-
-
-def plotEnergySplit(curves: list[np.ndarray]):
-    ys = []
-    for cur in curves:
-        if len(cur) == 0: continue
-        y = cur / cur[0] - 1
-        ys.append(y)
-    plotListOfArray(ys)
 
 
 class Disk(DiskPainter):
@@ -80,7 +52,7 @@ class Disk(DiskPainter):
 
     def plotPsi4(self, dots):
         self.plotContinuum(dots)(self.calSquarePhase(4), 'Oranges', '4p')
-    
+
     def plotPsi4AsSpheres(self, dots):
         spheres = Disk.fromConfigurationC(self.toSpheres(), self)
         spheres.plotContinuum(dots)(spheres.calSquarePhase(4), 'Oranges', '4ps')
@@ -92,7 +64,7 @@ class Disk(DiskPainter):
         spheres = Disk.fromConfigurationC(self.toSpheres(), self)
         spheres.plotDiscrete(dots)(spheres.calVoronoiNeighbors(), 'vs')
 
-    def plotOrientationAngles(self, dots):
+    def plotOrientationAngles(self):
         self.plotContinuumDotsNoColorBar__(self.thetas % np.pi, 'hsv', 'a')
 
     def plotConfigurationOnly(self, dots):
@@ -103,4 +75,14 @@ class Disk(DiskPainter):
             spheres.plotDiscrete(dots)([3] * self.n, 'c')
 
     def plotD4Field(self):
-        self.plotCross('d')
+        self.plotCross(self.thetas % (np.pi / 2), 'd')
+
+    def plotNematicInterpolation(self):
+        prefix = 'ni'
+        save_interpolation_image(self.nematicInterpolation(sz=400), np.pi,
+                                 self.dst_folder + prefix + str(self.idx) + '.jpg')
+
+    def plotD4Interpolation(self):
+        prefix = 'di'
+        save_interpolation_image(self.D4Interpolation(sz=400), np.pi / 2,
+                                 self.dst_folder + prefix + str(self.idx) + '.jpg')

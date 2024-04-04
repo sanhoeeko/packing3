@@ -6,15 +6,22 @@ import pandas as pd
 from visualization import Disk
 
 
-def makeDistDir(folder: str):
+def makeDstDir(folder: str):
     dir_name = os.path.join(folder, "visualization")
     if not os.path.exists(dir_name):
         os.mkdir(dir_name)
     return dir_name
 
 
-src_dir = '../temp2'
-dst_dir = makeDistDir(src_dir)
+def makeDstDstDir(dst_dir: str, name: str):
+    dir_name = os.path.join(dst_dir, name)
+    if not os.path.exists(dir_name):
+        os.mkdir(dir_name)
+    return dir_name + '/'
+
+
+src_dir = '../alljson'
+dst_dir = makeDstDir(src_dir)
 
 files = [f for f in os.listdir(src_dir) if os.path.isfile(os.path.join(src_dir, f))]
 names = list(set(map(lambda x: x.split('.')[0], files)))
@@ -30,7 +37,7 @@ for name in names:
         with open(os.path.join(src_dir, name + '.metadata.json'), 'r') as r:
             metadata = json.load(r)
         for i in range(len(json_lst)):
-            d = Disk(json_lst[i], metadata, dst_dir + '/', sz=500)
+            d = Disk(json_lst[i], metadata, makeDstDstDir(dst_dir, name), sz=500)
             disks.append(d)
             # make a list of name and metadata (name, n, Gamma, phi_f)
             meta_frame.loc[len(meta_frame)] = [name, d.ass_n, d.Gamma, d.ideal_packing_density(), d.La, d.Lb]
@@ -48,8 +55,13 @@ S_order = []
 for d in disks:
     S_order.append(d.aveScalarOrder())
     if ifplot:
-        d.plotOrientationAngles(True)
-        d.plotD4Field()
+        if d.ass_n == 1:
+            # d.plotConfigurationOnly(True)
+            pass
+        else:
+            # d.plotOrientationAngles(True)
+            # d.plotD4Field()
+            d.plotD4Interpolation()
 
 meta_frame['S order'] = S_order
 meta_frame.to_csv("scalar results.csv")
