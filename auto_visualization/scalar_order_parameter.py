@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 
 
@@ -9,9 +11,24 @@ def Q(n: np.ndarray):
     return np.outer(n, n) - 0.5 * np.eye(2)
 
 
+def eig2(mat):
+    """
+    :return: the eigen system of a zero trace, symmetric matrix [a, b; b, -a]
+    """
+    a, b = mat[0]
+    ev = math.sqrt(a ** 2 + b ** 2)
+    vec = np.array([ev + a, b])
+    return ev, vec / np.linalg.norm(vec)
+
+
 def s(Q: np.ndarray):
-    ev, vecs = np.linalg.eigh(Q)
-    return 2 * ev[-1]  # the largest positive eigenvalue. The coefficient 2 is for 2d, and 3/2 for 3d.
+    ev, vec = eig2(Q)
+    return 2 * ev  # the largest positive eigenvalue. The coefficient 2 is for 2d, and 3/2 for 3d.
+
+
+def eigen_angle(Q: np.ndarray):
+    ev, vec = eig2(Q)
+    return math.atan2(vec[1], vec[0])
 
 
 def calScalarOrderParameter(ns: np.ndarray, adjacent: np.ndarray) -> np.ndarray:
@@ -35,12 +52,23 @@ def calScalarOrderParameter(ns: np.ndarray, adjacent: np.ndarray) -> np.ndarray:
     return res
 
 
-def calFullScalarOrderParameter(ns: np.array):
+def calGlobalScalarOrderParameter(ns: np.ndarray):
     """
-    Calculate average scalar order parameter for the system
-    :param ns: (2, N) matrix
+    Calculate scalar order parameter as the system is uniform
+    :param ns: directors: (2, N) matrix
     """
     N = ns.shape[1]
     Qs = np.array([Q(ns[:, i]) for i in range(N)])
     Q_ave = sum(Qs) / len(Qs)
     return s(Q_ave)
+
+
+def calGlobalBestAngle(ns: np.ndarray):
+    """
+    Calculate the angle related to the order parameter as the system is uniform
+    :param ns: directors: (2, N) matrix
+    """
+    N = ns.shape[1]
+    Qs = np.array([Q(ns[:, i]) for i in range(N)])
+    Q_ave = sum(Qs) / len(Qs)
+    return eigen_angle(Q_ave)

@@ -5,6 +5,22 @@ import pandas as pd
 from project_replica import newExperiment
 
 
+def get_a_and_b_compression_coefficient(L0, Lt, max_descent_rate, min_descent_rate, Gamma):
+    """
+    :param L0: initial boundary scalar radius
+    :param Lt: terminal boundary scalar radius
+    :param max_descent_rate: the descent of the first compression (for semi-major axis A)
+    :param min_descent_rate: the descent of the last compression (for simi-minor axis B)
+    :return: a tuple a and b
+    """
+    delta = min_descent_rate
+    beta = max_descent_rate / Gamma
+    k = 2 * (L0 - Lt) - delta
+    a = k * delta / L0 ** 2
+    b = (beta ** 2 - k * delta) / L0 ** 2
+    return a, b
+
+
 def get_axis_from_fraction(n, N, R, Gamma, phi0):
     """
     :param n: assembly number
@@ -12,7 +28,7 @@ def get_axis_from_fraction(n, N, R, Gamma, phi0):
     :param R: sphere distance
     :param Gamma: aspect ratio of boundary
     :param phi0: ideal packing fraction
-    :return:
+    :return: a tuple A and B
     """
     B = math.sqrt((math.pi + 2 * R * (n - 1)) * N / (math.pi * Gamma * phi0))
     A = Gamma * B
@@ -33,7 +49,8 @@ def get_boundary_type(gamma):
     return "BoundaryC" if gamma == 1 else "BoundaryE"
 
 
-def ExperimentFixedSettings(N: int, R: float, rho0: float, phi_f: float):
+def ExperimentFixedSettings(N: int, R: float, rho0: float, phi_f: float, max_descent_rate: float,
+                            min_descent_rate: float):
     """
     :return: Callable which accepts a tuple: (n, Gamma, phi_f)
     """
@@ -41,8 +58,10 @@ def ExperimentFixedSettings(N: int, R: float, rho0: float, phi_f: float):
     def _invokeNewExperiment(n: int, Gamma: float):
         a, b = get_axis_from_fraction(n, N, R, Gamma, phi_f)
         A, B = get_axis_from_sphere_fraction(n, N, R, Gamma, rho0)
+        alpha, beta = get_a_and_b_compression_coefficient(B, b, max_descent_rate, min_descent_rate, Gamma)
         print(f"initial: A={A}, B={B}; final: a={a}, b={b}")
         return newExperiment(PARTICLE_NUM=N, ASSEMBLY_NUM=n, SPHERE_DIST=R, END_BOUNDARY_B=b,
+                             COMPRESSION_COEF_A=alpha, COMPRESSION_COEF_B=beta,
                              BOUNDARY_A=A, BOUNDARY_B=B, BSHAPE=get_boundary_type(Gamma))
 
     def invokeNewExperiment(tup: tuple):

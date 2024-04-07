@@ -68,7 +68,8 @@ class Disk(DiskPainter):
         self.plotContinuumDotsNoColorBar__(self.thetas % np.pi, 'hsv', 'a')
 
     def plotConfigurationOnly(self, dots):
-        if self.ass_n > 1:
+        if self.ass_n == 1:
+            del self.thetas
             self.plotDiscrete(dots)([3] * self.n, 'c')
         else:
             spheres = Disk.fromConfigurationC(self.toSpheres(), self)

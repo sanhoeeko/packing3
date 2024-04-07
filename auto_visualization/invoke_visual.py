@@ -20,7 +20,7 @@ def makeDstDstDir(dst_dir: str, name: str):
     return dir_name + '/'
 
 
-src_dir = '../alljson'
+src_dir = '../not_completed1'
 dst_dir = makeDstDir(src_dir)
 
 files = [f for f in os.listdir(src_dir) if os.path.isfile(os.path.join(src_dir, f))]
@@ -56,12 +56,12 @@ for d in disks:
     S_order.append(d.aveScalarOrder())
     if ifplot:
         if d.ass_n == 1:
-            # d.plotConfigurationOnly(True)
+            d.plotConfigurationOnly(True)
             pass
         else:
-            # d.plotOrientationAngles(True)
+            d.plotOrientationAngles()
             # d.plotD4Field()
-            d.plotD4Interpolation()
+            # d.plotD4Interpolation()
 
-meta_frame['S order'] = S_order
-meta_frame.to_csv("scalar results.csv")
+# meta_frame['S order'] = S_order
+# meta_frame.to_csv("scalar results.csv")

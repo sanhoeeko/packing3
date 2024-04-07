@@ -9,7 +9,7 @@ from scipy.spatial import Delaunay
 from scipy.stats import norm
 
 from graph import Graph, getFineContactMatrix, getBriefContactMatrix
-from scalar_order_parameter import calScalarOrderParameter, calFullScalarOrderParameter
+from scalar_order_parameter import calScalarOrderParameter, calGlobalScalarOrderParameter, calGlobalBestAngle
 
 # constants
 SQRT8 = sqrt(8)
@@ -215,6 +215,11 @@ class DiskNumerical(DiskData):
     @lru_cache(maxsize=None)
     def ideal_packing_density(self):
         return self.number_density() * (pi + 2 * self.Rm * (self.m - 1))
+    
+    @lru_cache(maxsize=None)
+    def ideal_overall_scalar_coef(self):
+        g = self.Gamma
+        return (g**2 - 1) / g * np.arctanh(1 / g)
 
     @lru_cache(maxsize=None)
     def angleInterpolation(self, fold: int, sz: int):
@@ -299,4 +304,15 @@ class DiskNumerical(DiskData):
     @lru_cache(maxsize=None)
     def overallScalarOrder(self):
         ns = np.vstack((np.cos(self.thetas), np.sin(self.thetas)))
-        return calFullScalarOrderParameter(ns)
+        return calGlobalScalarOrderParameter(ns)
+
+    @lru_cache(maxsize=None)
+    def overallBestAngle(self):
+        ns = np.vstack((np.cos(self.thetas), np.sin(self.thetas)))
+        return calGlobalBestAngle(ns)
+
+    @lru_cache(maxsize=None)
+    def angleDist(self) -> np.ndarray:
+        A = self.thetas % np.pi
+        hist, _ = np.histogram(A, bins=180)
+        return hist

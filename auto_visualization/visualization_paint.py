@@ -79,6 +79,9 @@ class DiskPainter(DiskNumerical):
         img.ellipse((self.relative_helper.shape[0], self.relative_helper.shape[1], 0),
                     (self.relative_helper.scaleVector(self.La), self.relative_helper.scaleVector(self.Lb)),
                     getColor(-1), 2)
+        
+    def outFileName(self):
+        return str(self.idx) + '_' + str(round(self.ideal_packing_density(), 4))
 
     def plotDiscrete__(self, data, prefix: str):
         """
@@ -95,7 +98,7 @@ class DiskPainter(DiskNumerical):
         for i in range(self.n):
             img.sphere_chain((X[i], Y[i], A[i]), centers, r, getColor(data[i]), 1)
 
-        cv.imwrite(self.dst_folder + prefix + str(self.idx) + '.jpg', img.toImg())
+        cv.imwrite(self.dst_folder + prefix + self.outFileName() + '.jpg', img.toImg())
 
     def plotContinuum__(self, data, color_map_name: str, prefix: str, fast_mode=True):
         """
@@ -124,7 +127,7 @@ class DiskPainter(DiskNumerical):
 
         # draw color bar
         img = draw_colorbar(img, color_map, min_value, max_value)
-        cv.imwrite(self.dst_folder + prefix + str(self.idx) + '.jpg', img)
+        cv.imwrite(self.dst_folder + prefix + self.outFileName() + '.jpg', img)
 
     def plotDiscreteDots__(self, data, prefix: str):
         """
@@ -144,7 +147,7 @@ class DiskPainter(DiskNumerical):
             rr = self.helper.scaleVector(1)
             for i in range(self.n):
                 img.circle((X[i], Y[i]), rr, getColor(data[i]), -1)
-        cv.imwrite(self.dst_folder + prefix + str(self.idx) + '.jpg', img.toImg())
+        cv.imwrite(self.dst_folder + prefix + self.outFileName() + '.jpg', img.toImg())
 
     def plotContinuumDots__(self, data, color_map_name: str, prefix: str, save=True):
         """
@@ -178,7 +181,7 @@ class DiskPainter(DiskNumerical):
         # draw color bar
         img = draw_colorbar(img, color_map, min_value, max_value)
         if save:
-            cv.imwrite(self.dst_folder + prefix + str(self.idx) + '.jpg', img)
+            cv.imwrite(self.dst_folder + prefix + self.outFileName() + '.jpg', img)
         else:
             # for further painting, like drawing networks
             return img
@@ -206,7 +209,7 @@ class DiskPainter(DiskNumerical):
             for i in range(self.n):
                 img.circle((X[i], Y[i]), rr, toTuple(colors[i]), -1)
                 
-        cv.imwrite(self.dst_folder + prefix + str(self.idx) + '.jpg', img.toImg())
+        cv.imwrite(self.dst_folder + prefix + self.outFileName() + '.jpg', img.toImg())
 
     def plotCross(self, data, prefix: str):
         X, Y = self.relative_helper.scalePosition(self.xs, self.ys)
@@ -221,4 +224,4 @@ class DiskPainter(DiskNumerical):
         for i in range(self.n):
             img.cross(X[i], Y[i], A[i], toTuple(colors[i]), 10, 2)
 
-        cv.imwrite(self.dst_folder + prefix + str(self.idx) + '.jpg', img.toImg())
+        cv.imwrite(self.dst_folder + prefix + self.outFileName() + '.jpg', img.toImg())
