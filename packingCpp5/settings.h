@@ -11,13 +11,13 @@ enum class ScalarF { Power, ScreenedColumb, Exp };
 
 // Basic options. Varies from one experiment to another.
 
-#define PARTICLE_NUM 100
-#define ASSEMBLY_NUM 5
-#define SPHERE_DIST 0.25f
-#define BOUNDARY_A 48
-#define BOUNDARY_B 32
-#define END_BOUNDARY_B 5
-#define COMPRESSION_RATE 0.1
+#define PARTICLE_NUM 1000
+#define ASSEMBLY_NUM 6
+#define SPHERE_DIST 0.4f
+#define BOUNDARY_A 120
+#define BOUNDARY_B 60
+#define END_BOUNDARY_B 17
+#define MAX_COMPRESSION_A 0.4
 #define MAX_INIT_ITERATIONS 100000
 #define MAX_ITERATIONS 100000
 #define MAX_INIT_ITERATIONS_FOR_CIRC 100000
@@ -37,6 +37,7 @@ enum class ScalarF { Power, ScreenedColumb, Exp };
 
 // depricated
 
+#define COMPRESSION_RATE 0.1
 #define NUM_COMPRESSIONS 400
 #define OUTPUT_STRIDE 1
 #define CEASE_FORCE 5e-2f	// non-zero contact force

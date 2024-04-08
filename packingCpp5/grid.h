@@ -3,8 +3,6 @@
 #include"defs.h"
 #include"ivector.h"
 
-#define MAX_CONTACT_NUMBER 32
-
 class Grid { public:
 	/*
 		This class is for locating particles.

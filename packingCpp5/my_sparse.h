@@ -79,11 +79,9 @@ struct MySparseMatrixBase {
         res.dict = this->dict.apply(f);     // note this "=". [operator=] of [IntPairMap] must be overloaded!!
         return res;
     }
-    MySparseMatrix<Nm, v2> applyFishing(void (*f)(t&, float&, float&)) const& {
-        // input: a function void f(r, x, y, [fx, fy]) to calculate forces
-        MySparseMatrix<Nm, v2> res;
-        res.dict = this->dict.applyFishing(f);
-        return res;
+    template<typename result_t>
+    void applyVectorized(void(*f)(t*, float*, int), MySparseMatrix<Nm, result_t>& dst){
+        this->dict.template applyVectorized<result_t>(f, dst.dict);
     }
     MySparseVector<Nm, t> rowwiseSumAsym() {
         MySparseVector<Nm, t> res;

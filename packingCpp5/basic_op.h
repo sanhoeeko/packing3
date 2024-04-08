@@ -66,14 +66,20 @@ float _calEnergy_from_dist(DistInfo<m* N>* rs) {
 	return energy_pp + energy_pw;
 }
 
-inline v2 singleForcePP(Triplet& rxy) {
-	float fr = V.dpp_r(rxy.r);
-	return { fr * rxy.x,fr * rxy.y };
+inline void singleForcePP_vectorized(Triplet* rxy, float* f_as_v2, int n) {
+	for (int i = 0; i < n; i++) {
+		float fr = V.dpp_r(rxy[i].r);
+		*f_as_v2++ = fr * rxy[i].x;
+		*f_as_v2++ = fr * rxy[i].y;
+	}
 }
 
-inline void singleForcePP_fishing(Triplet& rxy, float& fx, float& fy) {
-	float fr = V.dpp_r(rxy.r);
-	fx = fr * rxy.x;  fy = fr * rxy.y;
+inline void singleForcePW_vectorized(TripletB* hxy, float* f_as_v2, int n) {
+	for (int i = 0; i < n; i++) {
+		float fr = V.dpw(hxy[i].h);
+		*f_as_v2++ = -fr * hxy[i].x;
+		*f_as_v2++ = -fr * hxy[i].y;
+	}
 }
 
 inline v2 singleForcePW(TripletB& hxy) {
@@ -84,7 +90,10 @@ inline v2 singleForcePW(TripletB& hxy) {
 template<int m, int N, typename bt>
 Vecf<2 * N * m> _calForce_from_dist(DistInfo<m* N>* rs, SphereAssembly<m>* sa) {
 	// particle-particle force
-	Vecf<2 * N * m> forces_pp = rs->distpp->apply(singleForcePP).rowwiseSumAsym().toVector();
+	// Vecf<2 * N * m> forces_pp = rs->distpp->template applyVectorized<v2>(singleForcePP_vectorized).rowwiseSumAsym().toVector();
+	static MySparseMatrix<m * N, v2> temp;
+	rs->distpp->template applyVectorized<v2>(singleForcePP_vectorized, temp);
+	Vecf<2 * N * m> forces_pp = temp.rowwiseSumAsym().toVector();
 	// particle-wall force
 	Vecf<2 * N * m> forces_pw = rs->distpw->apply(singleForcePW).toVector();
 	Vecf<2 * N * m> forces = forces_pp + forces_pw;

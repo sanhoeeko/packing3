@@ -36,7 +36,7 @@ struct IntPairMap{
 		int capacity = n * threads;
 		secs = (std::pair<int, int>*)malloc(capacity * sizeof(std::pair<int, int>));
 		sizes = (int*)malloc(n * sizeof(int)); memset(sizes, 0, n * sizeof(int));
-		data = (t*)malloc(capacity * sizeof(t));	// use malloc: do not call the construct function of t. dangerous operation here.
+		data = (t*)malloc(capacity * sizeof(t));	// use malloc: do not call the construct function of t. This is a dangerous operation here.
 		cnt = 0;
 	}
 	IntPairMap(const IntPairMap<n, threads, t>& src) {
@@ -88,7 +88,7 @@ struct IntPairMap{
 	}
 	template<typename s>
 	IntPairMap<n, threads, s> apply(s(*f)(t&)) const & {
-		// slow
+		// very slow, don't use it!
 		int capacity = n * threads;
 		IntPairMap<n, threads, s> res;
 		memcpy(res.secs, this->secs, capacity * sizeof(std::pair<int, int>));
@@ -99,18 +99,13 @@ struct IntPairMap{
 		res.cnt = this->cnt;
 		return res;
 	}
-	IntPairMap<n, threads, v2> applyFishing(void (*f)(t&, float&, float&)) const& {
-		// faster, because prevent a construction and a deconstruction
-		// Update: not so fast as imagination
+	template<typename s>
+	void applyVectorized(void(*f)(t*, float*, int), IntPairMap<n, threads, s>& dst){
 		int capacity = n * threads;
-		IntPairMap<n, threads, v2> res;
-		memcpy(res.secs, this->secs, capacity * sizeof(std::pair<int, int>));
-		memcpy(res.sizes, this->sizes, n * sizeof(int));
-		for (int i = 0; i < cnt; i++) {
-			f(this->data[i], res.data[i].x, res.data[i].y);
-		}
-		res.cnt = this->cnt;
-		return res;
+		memcpy(dst.secs, this->secs, capacity * sizeof(std::pair<int, int>));
+		memcpy(dst.sizes, this->sizes, n * sizeof(int));
+		f(this->data, (float*)(void*)(dst.data), this->cnt);
+		dst.cnt = this->cnt;
 	}
 };
 

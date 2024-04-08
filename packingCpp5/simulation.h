@@ -11,6 +11,7 @@ struct Simulation{
 	IvectorSampler<float, descent_curve_capacity, ENERGY_RESOLUTION>* energy_curve;
 	Metadata<PARTICLE_NUM, BSHAPE>* meta;
 	float current_step_size;	// for mutable step size
+	float compression_ratio;
 
 	Simulation(bool output_init_data) {
 		// state_info = CreateRandomState<ASSEMBLY_NUM, PARTICLE_NUM, BSHAPE>(BOUNDARY_A, BOUNDARY_B);
@@ -19,7 +20,9 @@ struct Simulation{
 		meta = new Metadata<PARTICLE_NUM, BSHAPE>();
 		meta->output();
 		energy_curve = new IvectorSampler<float, descent_curve_capacity, ENERGY_RESOLUTION>(&_energy_curve);
+		
 		current_step_size = CLASSIC_STEP_SIZE;
+		compression_ratio = (1 - MAX_COMPRESSION_A / BOUNDARY_A);
 
 		std::cout << "Simulation ID: " << meta->name << std::endl;
 		/*
@@ -87,7 +90,7 @@ struct Simulation{
 			t++;
 			// "set" the boundary radius, rather than substract.
 			// state_info.state->boundary->setScalarRadius(init_radius - t * this->meta->boundary_compression_rate);
-			state_info.state->boundary->setScalarRadius(init_radius - 0.8 * (sqrtf(t + 2.236) - 1.495));
+			state_info.state->boundary->setScalarRadius(init_radius * powf(compression_ratio, t));
 			double tc;
 			RecordTime(tc,
 				InnerLoopData data = loop_custom(CLASSIC_STEP_SIZE, MAX_ITERATIONS);
