@@ -94,10 +94,9 @@ std::tuple<float, float, float> BoundaryE::h(float x, float y)
 std::tuple<float, float, float> BoundaryE::h(float x, float y)
 {
     // return format: h, x, y
-    static float Tx, Ty;
+    static float dx, dy;
     if (sol.gate(x, y)) {
-        sol.h_easy(x, y, Tx, Ty);
-        float dx = std::abs(x - Tx), dy = std::abs(y - Ty);
+        sol.h_easy(x, y, dx, dy);
         float abs_h = std::sqrt(dx * dx + dy * dy);
         return{ abs_h, (x > 0 ? -dx / abs_h : dx / abs_h), (y > 0 ? -dy / abs_h : dy / abs_h) };
     }

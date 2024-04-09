@@ -39,6 +39,7 @@ struct IntPairMap{
 		data = (t*)malloc(capacity * sizeof(t));	// use malloc: do not call the construct function of t. This is a dangerous operation here.
 		cnt = 0;
 	}
+	/*
 	IntPairMap(const IntPairMap<n, threads, t>& src) {
 		int capacity = n * threads;
 		secs = (std::pair<int, int>*)malloc(capacity * sizeof(std::pair<int, int>));
@@ -61,7 +62,7 @@ struct IntPairMap{
 		free(secs);
 		free(sizes);
 		free(data);
-	}
+	}*/
 	int size() {
 		return cnt;
 	}
@@ -102,8 +103,8 @@ struct IntPairMap{
 	template<typename s>
 	void applyVectorized(void(*f)(t*, float*, int), IntPairMap<n, threads, s>& dst){
 		int capacity = n * threads;
-		memcpy(dst.secs, this->secs, capacity * sizeof(std::pair<int, int>));
-		memcpy(dst.sizes, this->sizes, n * sizeof(int));
+		dst.secs = this->secs;
+		dst.sizes = this->sizes;
 		f(this->data, (float*)(void*)(dst.data), this->cnt);
 		dst.cnt = this->cnt;
 	}

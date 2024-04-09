@@ -111,6 +111,18 @@ struct BESolver {
         }
     }
 
+    void h_easy(float _x0, float _y0, float& _dx, float& _dy) {
+        // assume that all particles are inside the ellipse
+        float x0 = std::abs(_x0), y0 = std::abs(_y0);
+        static float x1, y1;
+        x02 = x0 * x0; y02 = y0 * y0;           // update x02, y02 at once, before the first estimation.
+        std::tie(x1, y1) = inner(x0, y0);       // x1, y1 is in the first quadrant
+        _dx = std::abs(x0 - x1);
+        _dy = std::abs(y0 - y1);
+    }
+
+    /* Do not use: Bug in it */
+    /*
     void h_easy(float _x0, float _y0, float& _x1, float& _y1) {
         float x = std::abs(_x0), y = std::abs(_y0);
         float x2 = x * x, y2 = y * y;
@@ -131,5 +143,5 @@ struct BESolver {
         yp = b2 * y / Tb;
         _x1 = _x0 > 0 ? xp : -xp;
         _y1 = _y0 > 0 ? yp : -yp;
-    }
+    }*/
 };
