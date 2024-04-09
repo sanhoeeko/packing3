@@ -11,12 +11,12 @@ enum class ScalarF { Power, ScreenedColumb, Exp };
 
 // Basic options. Varies from one experiment to another.
 
-#define PARTICLE_NUM 1000
+#define PARTICLE_NUM 400
 #define ASSEMBLY_NUM 6
-#define SPHERE_DIST 0.4f
-#define BOUNDARY_A 120
-#define BOUNDARY_B 60
-#define END_BOUNDARY_B 17
+#define SPHERE_DIST 0.2f
+#define BOUNDARY_A 80
+#define BOUNDARY_B 40
+#define END_BOUNDARY_B 8
 #define MAX_COMPRESSION_A 0.4
 #define MAX_INIT_ITERATIONS 100000
 #define MAX_ITERATIONS 100000

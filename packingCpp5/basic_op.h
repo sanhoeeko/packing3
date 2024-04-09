@@ -74,6 +74,18 @@ inline void singleForcePP_vectorized(Triplet* rxy, float* f_as_v2, int n) {
 	}
 }
 
+inline void singleForcePP_vectorized_eigen(Triplet* rxy, float* f_as_v2, int n) {
+	/*
+		Not faster. Do not use it.
+	*/
+	static auto lambda_pp = [](float r)->float {return V.dpp_r(r); };
+	Eigen::Map<Eigen::Matrix<float, 3, Eigen::Dynamic> > mat((float*)rxy, 3, n);
+	Eigen::VectorXf fr = mat.row(0).unaryExpr(lambda_pp);
+	Eigen::MatrixXf xy = mat.block(1, 0, 2, n);
+	Eigen::Map<Eigen::VectorXf> fr2(f_as_v2, 2 * n);
+	fr2 = fr.replicate<2, 1>().array() * xy.array();
+}
+
 inline void singleForcePW_vectorized(TripletB* hxy, float* f_as_v2, int n) {
 	for (int i = 0; i < n; i++) {
 		float fr = V.dpw(hxy[i].h);

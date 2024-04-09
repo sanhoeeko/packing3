@@ -110,4 +110,26 @@ struct BESolver {
             return false;
         }
     }
+
+    void h_easy(float _x0, float _y0, float& _x1, float& _y1) {
+        float x = std::abs(_x0), y = std::abs(_y0);
+        float x2 = x * x, y2 = y * y;
+        float t = -b * b + b * y;
+        float xp, yp, Ta, Tb;
+        for (int i = 0; i < tangents_num; i++) {
+            Ta = a2 + t; Tb = b2 + t;
+            float Ta2 = Ta * Ta, Tb2 = Tb * Tb;
+            float f = (a2 * x2) / Ta2 + (b2 * y2) / Tb2 - 1;
+            float df = -2 * ((a2 * x2) / (Ta2 * Ta) + (b2 * y2) / (Tb2 * Tb));
+            float grad = f / df;
+            t -= grad;
+            if (std::abs(grad) < precision) {
+                break;
+            }
+        }
+        xp = a2 * x / Ta;
+        yp = b2 * y / Tb;
+        _x1 = _x0 > 0 ? xp : -xp;
+        _y1 = _y0 > 0 ? yp : -yp;
+    }
 };

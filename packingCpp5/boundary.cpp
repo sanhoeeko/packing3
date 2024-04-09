@@ -60,6 +60,10 @@ void BoundaryE::setScalarRadius(float scalar_radius)
     sol = BESolver(a, b);   // Do not forget to update the solver since there is one!
 }
 
+/*
+    Deprecated. For (x,y) can be outside the ellipse
+*/
+/*
 std::tuple<float, float, float> BoundaryE::h(float x, float y)
 {
     // return format: h, x, y
@@ -80,6 +84,22 @@ std::tuple<float, float, float> BoundaryE::h(float x, float y)
                 return{ -abs_h, (x > 0 ? -dx / abs_h : dx / abs_h), (y > 0 ? -dy / abs_h : dy / abs_h) };
             }
         }
+    }
+    else {
+        return { 2.0f, 0, 0 };
+    }
+}
+*/
+
+std::tuple<float, float, float> BoundaryE::h(float x, float y)
+{
+    // return format: h, x, y
+    static float Tx, Ty;
+    if (sol.gate(x, y)) {
+        sol.h_easy(x, y, Tx, Ty);
+        float dx = std::abs(x - Tx), dy = std::abs(y - Ty);
+        float abs_h = std::sqrt(dx * dx + dy * dy);
+        return{ abs_h, (x > 0 ? -dx / abs_h : dx / abs_h), (y > 0 ? -dy / abs_h : dy / abs_h) };
     }
     else {
         return { 2.0f, 0, 0 };
