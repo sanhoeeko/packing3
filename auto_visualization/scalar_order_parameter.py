@@ -22,8 +22,12 @@ def eig2(mat):
 
 
 def s(Q: np.ndarray):
+    """
     ev, vec = eig2(Q)
     return 2 * ev  # the largest positive eigenvalue. The coefficient 2 is for 2d, and 3/2 for 3d.
+    """
+    a, b = Q[0]
+    return 2 * math.sqrt(a ** 2 + b ** 2)
 
 
 def eigen_angle(Q: np.ndarray):

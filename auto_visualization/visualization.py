@@ -72,8 +72,7 @@ class Disk(DiskPainter):
             del self.thetas
             self.plotDiscrete(dots)([3] * self.n, 'c')
         else:
-            spheres = Disk.fromConfigurationC(self.toSpheres(), self)
-            spheres.plotDiscrete(dots)([3] * self.n, 'c')
+            self.plotDiscrete(dots)([3] * self.n, 'c')
 
     def plotD4Field(self):
         self.plotCross(self.thetas % (np.pi / 2), 'd')

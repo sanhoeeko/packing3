@@ -139,7 +139,7 @@ class DiskPainter(DiskNumerical):
 
         if hasattr(self, 'thetas'):
             A = self.thetas
-            cc = self.helper.scaleVector(self.particle_c)
+            cc = self.helper.scaleVector(self.gamma)
             bb = self.helper.scaleVector(1)
             for i in range(self.n):
                 img.sphericalCylinder(np.array((X[i], Y[i])), A[i], cc, getColor(data[i]), bb)
@@ -163,7 +163,7 @@ class DiskPainter(DiskNumerical):
 
         if hasattr(self, 'thetas'):
             A = self.thetas
-            cc = self.helper.scaleVector(self.particle_c)
+            cc = self.helper.scaleVector(self.gamma)
             bb = self.helper.scaleVector(1)
             for i in range(self.n):
                 img.sphericalCylinder(np.array((X[i], Y[i])), A[i], cc, toTuple(colors[i]), bb)
@@ -200,7 +200,7 @@ class DiskPainter(DiskNumerical):
 
         if hasattr(self, 'thetas'):
             A = self.thetas
-            cc = self.helper.scaleVector(self.particle_c)
+            cc = self.helper.scaleVector(self.gamma)
             bb = self.helper.scaleVector(1)
             for i in range(self.n):
                 img.sphericalCylinder(np.array((X[i], Y[i])), A[i], cc, toTuple(colors[i]), bb)

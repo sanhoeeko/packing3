@@ -18,6 +18,12 @@ Rsq = (2 - dist_tol) ** 2
 force_range = np.arange(0, 5, 0.01)  # for histogram of force distribution
 
 
+def correlationFunction(x: np.ndarray, y: np.ndarray):
+    x_bar = np.mean(x)
+    y_bar = np.mean(y)
+    return np.dot(x - x_bar, y - y_bar) / len(x)
+
+
 def cooLike(coo: coo_matrix, new_data: np.ndarray):
     return coo_matrix((new_data, (coo.row, coo.col)), shape=coo.shape, dtype=new_data.dtype)
 
@@ -82,6 +88,7 @@ class Configuration(ConfigurationC):
         self.Gamma = self.LaM / self.LbM
         self.La = self.Gamma * self.L
         self.Lb = self.L  # the scalar radius
+        self.gamma = 1 + (self.m - 1) * self.Rm / 2
 
     @lru_cache(maxsize=None)
     def contactMatrix(self):
@@ -201,6 +208,18 @@ class DiskNumerical(DiskData):
         return square
 
     @lru_cache(maxsize=None)
+    def CorrelationPhi6S(self):
+        phi = self.calHexatic(6)
+        s = self.scalarOrderParameter()
+        return correlationFunction(phi, s)
+
+    @lru_cache(maxsize=None)
+    def CorrelationPhi4S(self):
+        phi = self.calSquarePhase(4)
+        s = self.scalarOrderParameter()
+        return correlationFunction(phi, s)
+
+    @lru_cache(maxsize=None)
     def averageBondOrientationalOrder(self, order=6):
         return np.sum(self.calHexatic(order)) / self.n
 
@@ -215,11 +234,11 @@ class DiskNumerical(DiskData):
     @lru_cache(maxsize=None)
     def ideal_packing_density(self):
         return self.number_density() * (pi + 2 * self.Rm * (self.m - 1))
-    
+
     @lru_cache(maxsize=None)
     def ideal_overall_scalar_coef(self):
         g = self.Gamma
-        return (g**2 - 1) / g * np.arctanh(1 / g)
+        return (g ** 2 - 1) / g * np.arctanh(1 / g)
 
     @lru_cache(maxsize=None)
     def angleInterpolation(self, fold: int, sz: int):
@@ -305,6 +324,10 @@ class DiskNumerical(DiskData):
     def overallScalarOrder(self):
         ns = np.vstack((np.cos(self.thetas), np.sin(self.thetas)))
         return calGlobalScalarOrderParameter(ns)
+    
+    @lru_cache(maxsize=None)
+    def scalarOrderByX(self):
+        return np.mean(np.cos(2 * self.thetas))
 
     @lru_cache(maxsize=None)
     def overallBestAngle(self):

@@ -2,8 +2,10 @@ import json
 import os
 
 import pandas as pd
+import math
 
 from visualization import Disk
+from visualization_paint import ScaleHelper
 import scalar_analysis as sc
 
 
@@ -21,8 +23,14 @@ def makeDstDstDir(dst_dir: str, name: str):
     return dir_name + '/'
 
 
-src_dir = '../gamma125'
+src_dir = '../gamma125c'
 dst_dir = makeDstDir(src_dir)
+
+
+rate = 0.99288  # gamma125c
+# rate = 0.99466  # gamma2c
+# rate = 0.996  # gamma3c
+# rate = 0.9968  # gamma4c
 
 files = [f for f in os.listdir(src_dir) if os.path.isfile(os.path.join(src_dir, f))]
 names = list(set(map(lambda x: x.split('.')[0], files)))
@@ -40,6 +48,10 @@ for name in names:
             metadata = json.load(r)
         for i in range(len(json_lst)):
             d = Disk(json_lst[i], metadata, makeDstDstDir(dst_dir, name), sz=500)
+            d.Lb = d.La * rate ** (i + 1)
+            d.LbM = d.LaM * math.sqrt(d.Lb / d.La)
+            d.helper = ScaleHelper(d.height / d.LbM, d.LaM, d.LbM)
+            d.relative_helper = ScaleHelper(d.height / d.Lb, d.La, d.Lb)
             disks.append(d)
             # make a list of name and metadata (name, n, Gamma, phi_f)
             meta_frame.loc[len(meta_frame)] = [name, d.ass_n, d.Gamma, d.ideal_packing_density(), d.La, d.Lb]
@@ -49,8 +61,9 @@ for name in names:
 disk_groups.sort(key=lambda x:x[0].Gamma)
     
 
-sc.plotEnergys(disk_groups)
-    
+xs = sc.getDensityCurve(disk_groups[0])
+# ys = sc.getScalarOrderByX(disk_groups[0])
+ys = sc.getEnergyCurve(disk_groups[0])
 
 # perform a set of visualization
 ifplot = False
@@ -66,5 +79,3 @@ for disks in disk_groups:
                 # d.plotD4Field()
                 # d.plotD4Interpolation()
 
-# meta_frame['S order'] = S_order
-# meta_frame.to_csv("scalar results.csv")
