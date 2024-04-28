@@ -16,36 +16,42 @@ def chmodWait(dir: str):
         p.wait()
 
 
-def createTempDir():
-    if os.path.exists(temp_dir_name):
-        chmodWait(temp_dir_name)
-        shutil.rmtree(temp_dir_name)
-    os.mkdir(temp_dir_name)
-    chmodWait(temp_dir_name)
+def createTempDir(dir_name=temp_dir_name):
+    print("mkdir:", dir_name)
+    if os.path.exists(dir_name):
+        chmodWait(dir_name)
+        shutil.rmtree(dir_name)
+    os.mkdir(dir_name)
+    chmodWait(dir_name)
 
 
-def tempToZip():
-    chmodWait(temp_dir_name)
-    CreateZipFile(temp_dir_name)
+def tempToZip(dir_name=temp_dir_name):
+    chmodWait(dir_name)
+    CreateZipFile(dir_name)
     chmodWait(zip_file_name)
-    shutil.rmtree(temp_dir_name)
+    shutil.rmtree(dir_name)
 
 
 def extractData(folder: str):
     if os.path.exists(folder):
+        json_name_cache = None
+        print("reading folder", folder)
         for file in os.listdir(folder):
             # file: file name, without path
             if file.endswith('.json'):
                 # get json name
                 json_name_cache = file.split('.')[0]
                 # extract json file
-                shutil.copy(os.path.join(folder, file), os.path.join(temp_dir_name, file))
+                shutil.copy2(os.path.join(folder, file), os.path.join(temp_dir_name, file))
+        # if the json data file is not complete, break
+        if json_name_cache is None:
+            return False
         # collect settings.h
         for file in os.listdir(folder):
             if file == 'settings.h':
-                shutil.copy(os.path.join(folder, file), os.path.join(temp_dir_name, json_name_cache + ".settings.h"))
+                shutil.copy2(os.path.join(folder, file), os.path.join(temp_dir_name, json_name_cache + ".settings.h"))
             elif file == 'nohup.out':
-                shutil.copy(os.path.join(folder, file), os.path.join(temp_dir_name, json_name_cache + ".nohup.out"))
+                shutil.copy2(os.path.join(folder, file), os.path.join(temp_dir_name, json_name_cache + ".nohup.out"))
         return True
     else:
         return False
@@ -63,7 +69,7 @@ if __name__ == '__main__':
     temp_dir_name = "__temp__"
     current_dir = os.getcwd()
     dirs = list(filter(isDstPath, filter(os.path.isdir, os.listdir(current_dir))))
-    createTempDir()
+    createTempDir(temp_dir_name)
     for d in dirs:
         extractData(d)
-    tempToZip()
+    tempToZip(temp_dir_name)

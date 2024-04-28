@@ -7,7 +7,7 @@ import json_output as jo
 from param_convert import ExperimentFixedSettings
 from multiprocessing import cpu_count
 
-fixed_settings = ExperimentFixedSettings(N=1000, R=0.2, rho0=0.4, phi_f=4, max_descent_rate=0.4, min_descent_rate=0.01)
+fixed_settings = ExperimentFixedSettings(N=1000, R=0.25, rho0=0.4, phi_f=12)
 
 n = [5]
 Gamma = [1, 2, 3, 4]

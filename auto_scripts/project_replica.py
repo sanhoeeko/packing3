@@ -56,7 +56,7 @@ def newExperiment(**kwargs):
         w.write(cs.itemsToFile(setting_items))
     # compile the project
     # do not use '-std=c++17' because it conflicts with nlohmann.json
-    compile_command = f"g++ *.cpp -o a{str(index)}.out -O3 -Ofast -mavx -mfma -fopenmp -march=native"
+    compile_command = f"g++ *.cpp -o a{str(index)}.out -O3"
     subprocess.run(compile_command, shell=True, cwd=f"{str(index)}")
     # run the project
     outfile = "nohup.out"

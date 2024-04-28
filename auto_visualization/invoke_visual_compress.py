@@ -23,11 +23,13 @@ def makeDstDstDir(dst_dir: str, name: str):
     return dir_name + '/'
 
 
-src_dir = '../gamma125c'
+src_dir = '../data/gamma175c'
 dst_dir = makeDstDir(src_dir)
 
 
-rate = 0.99288  # gamma125c
+# rate = 0.99288  # gamma125c
+# rate = 0.9936  # gamma150c
+rate = 0.99418  # gamma175c
 # rate = 0.99466  # gamma2c
 # rate = 0.996  # gamma3c
 # rate = 0.9968  # gamma4c
@@ -62,8 +64,9 @@ disk_groups.sort(key=lambda x:x[0].Gamma)
     
 
 xs = sc.getDensityCurve(disk_groups[0])
-# ys = sc.getScalarOrderByX(disk_groups[0])
-ys = sc.getEnergyCurve(disk_groups[0])
+# phi4, phi6 = sc.getPhi4Phi6(disk_groups[0])
+ys = sc.getScalarOrderByX(disk_groups[0])
+# ys = sc.getAveScalarOrderCurve(disk_groups[0])
 
 # perform a set of visualization
 ifplot = False

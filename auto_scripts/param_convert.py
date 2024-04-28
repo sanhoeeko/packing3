@@ -49,8 +49,7 @@ def get_boundary_type(gamma):
     return "BoundaryC" if gamma == 1 else "BoundaryE"
 
 
-def ExperimentFixedSettings(N: int, R: float, rho0: float, phi_f: float, max_descent_rate: float,
-                            min_descent_rate: float):
+def ExperimentFixedSettings(N: int, R: float, rho0: float, phi_f: float):
     """
     :return: Callable which accepts a tuple: (n, Gamma, phi_f)
     """
@@ -58,10 +57,9 @@ def ExperimentFixedSettings(N: int, R: float, rho0: float, phi_f: float, max_des
     def _invokeNewExperiment(n: int, Gamma: float):
         a, b = get_axis_from_fraction(n, N, R, Gamma, phi_f)
         A, B = get_axis_from_sphere_fraction(n, N, R, Gamma, rho0)
-        alpha, beta = get_a_and_b_compression_coefficient(B, b, max_descent_rate, min_descent_rate, Gamma)
+        # alpha, beta = get_a_and_b_compression_coefficient(B, b, max_descent_rate, min_descent_rate, Gamma)
         print(f"initial: A={A}, B={B}; final: a={a}, b={b}")
         return newExperiment(PARTICLE_NUM=N, ASSEMBLY_NUM=n, SPHERE_DIST=R, END_BOUNDARY_B=b,
-                             COMPRESSION_COEF_A=alpha, COMPRESSION_COEF_B=beta,
                              BOUNDARY_A=A, BOUNDARY_B=B, BSHAPE=get_boundary_type(Gamma))
 
     def invokeNewExperiment(tup: tuple):

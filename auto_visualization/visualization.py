@@ -40,20 +40,20 @@ class Disk(DiskPainter):
     def plotScalarOrder(self, dots):
         self.plotContinuum(dots)(self.scalarOrderParameter(), 'Blues', 'e')
 
-    def plotPsi6(self, dots):
+    def plotPhi6(self, dots):
         self.plotContinuum(dots)(self.calHexatic(6), 'Greens', '6p')
 
-    def plotPsi6AsSpheres(self, dots):
+    def plotPhi6AsSpheres(self, dots):
         spheres = Disk.fromConfigurationC(self.toSpheres(), self)
         spheres.plotContinuum(dots)(spheres.calHexatic(6), 'Greens', '6ps')
 
-    def plotPsi5(self, dots):
+    def plotPhi5(self, dots):
         self.plotContinuum(dots)(self.calSquarePhase(5), 'PuRd', '5p')
 
-    def plotPsi4(self, dots):
+    def plotPhi4(self, dots):
         self.plotContinuum(dots)(self.calSquarePhase(4), 'Oranges', '4p')
 
-    def plotPsi4AsSpheres(self, dots):
+    def plotPhi4AsSpheres(self, dots):
         spheres = Disk.fromConfigurationC(self.toSpheres(), self)
         spheres.plotContinuum(dots)(spheres.calSquarePhase(4), 'Oranges', '4ps')
 

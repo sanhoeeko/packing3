@@ -21,7 +21,7 @@ def makeDstDstDir(dst_dir: str, name: str):
     return dir_name + '/'
 
 
-src_dir = '../gamma125'
+src_dir = '../data/gamma4'
 dst_dir = makeDstDir(src_dir)
 
 files = [f for f in os.listdir(src_dir) if os.path.isfile(os.path.join(src_dir, f))]
@@ -49,8 +49,10 @@ for name in names:
 disk_groups.sort(key=lambda x:x[0].Gamma)
     
 
-sc.plotEnergys(disk_groups)
-    
+# sc.plotEnergys(disk_groups)
+xs = sc.getDensityCurve(disk_groups[-1])
+ys = sc.getScalarOrderByX(disk_groups[-1])
+
 
 # perform a set of visualization
 ifplot = False
@@ -62,9 +64,14 @@ for disks in disk_groups:
                 d.plotConfigurationOnly(True)
                 pass
             else:
-                d.plotOrientationAngles()
+                # d.plotOrientationAngles()
+                # d.plotVoronoiNeighbors(True)
+                try:
+                    d.plotPhi4(True)
+                    d.plotPhi6(True)
+                except:
+                    pass
                 # d.plotD4Field()
-                # d.plotD4Interpolation()
 
 # meta_frame['S order'] = S_order
 # meta_frame.to_csv("scalar results.csv")
